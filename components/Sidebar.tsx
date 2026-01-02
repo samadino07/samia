@@ -134,8 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
         {/* Sidebar Footer */}
         <div className="relative z-10 p-6 border-t border-white/10 bg-black/20 mt-auto">
            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-gold to-yellow-600 flex items-center justify-center text-[10px] font-bold text-black shadow-lg ring-2 ring-white/10">
-                 RS
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg ring-2 ring-white/10 overflow-hidden">
+                 <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
                  <span className="text-white text-xs font-bold">Résidence Samia</span>
