@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserRole } from '../types';
 import { MENU_ITEMS, LOGO_URL } from '../constants';
@@ -15,7 +16,8 @@ import {
   Clock,
   ChevronRight,
   ShieldCheck,
-  Settings
+  Settings,
+  DownloadCloud
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,6 +26,7 @@ interface SidebarProps {
   onItemClick: (item: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  onInstall?: () => void;
 }
 
 // Helper to map menu items to icons
@@ -44,7 +47,7 @@ const getIconForMenuItem = (item: string) => {
   }
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick, isOpen, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick, isOpen, onClose, onInstall }) => {
   const items = MENU_ITEMS[role] || [];
 
   return (
@@ -82,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
            </div>
            <button 
              onClick={onClose} 
-             className="text-white/70 hover:text-white lg:hidden p-1 hover:bg-white/10 rounded-full transition-colors"
+             className="text-white/70 hover:text-white lg:hidden p-2 hover:bg-white/10 rounded-full transition-colors"
            >
              <X size={24} />
            </button>
@@ -133,9 +136,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
           </ul>
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="relative z-10 p-6 border-t border-white/10 bg-black/20 mt-auto">
-           <div className="flex items-center gap-3">
+        {/* Sidebar Footer & Install Button */}
+        <div className="relative z-10 p-6 border-t border-white/10 bg-black/20 mt-auto space-y-4">
+           {onInstall && (
+             <button 
+               onClick={onInstall}
+               className="w-full py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+             >
+                <DownloadCloud size={16} /> Installer l'App
+             </button>
+           )}
+
+           <div className="flex items-center gap-3 opacity-70">
               <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg ring-2 ring-white/10 overflow-hidden">
                  <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" />
               </div>

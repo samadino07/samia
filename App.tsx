@@ -371,7 +371,6 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     }
   }, [user]);
 
-  // FIX: Added missing handleThemeToggle definition
   const handleThemeToggle = (isDark: boolean) => {
     if (isDark) {
       document.body.classList.remove('theme-light');
@@ -823,7 +822,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
          </div>
 
          {showAddForm && (
-            <div className="dashboard-card p-8 mb-8 border-2 border-[var(--role-color)]/20 animate-slide-in relative bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="dashboard-card p-4 md:p-8 mb-8 border-2 border-[var(--role-color)]/20 animate-slide-in relative bg-gray-50/50 dark:bg-gray-900/50">
                <button onClick={() => setShowAddForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                <h4 className="font-bold text-lg mb-6 flex items-center gap-2 text-[var(--role-color)]"><Tag size={20}/> Nouveau Produit</h4>
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -999,63 +998,65 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
       )}
 
       <div className="dashboard-card overflow-hidden p-0 border border-[var(--border-color)]">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-white/5">
-            <tr>
-               <th className="px-6 py-4 text-left font-bold text-gray-500 uppercase tracking-wider text-xs">Jour</th>
-               <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Petit Déjeuner</th>
-               <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Déjeuner</th>
-               <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Goûter</th>
-               <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Dîner</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-             {Object.keys(weeklyPlan).map(day => (
-               <tr key={day} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-5 font-bold text-base">{day}</td>
-                  {(['PtDej', 'Dej', 'Gouter', 'Diner'] as MealType[]).map(type => {
-                    const dishId = weeklyPlan[day][type];
-                    const dish = getDish(dishId);
-                    return (
-                      <td key={type} className="px-6 py-4">
-                        {editingSlot?.day === day && editingSlot?.type === type ? (
-                          <select 
-                            className="w-full p-2.5 rounded-lg border border-[var(--role-color)] shadow-sm bg-white dark:bg-gray-800 text-sm focus:outline-none"
-                            onChange={(e) => handleAssignDish(e.target.value)}
-                            autoFocus
-                            onBlur={() => setEditingSlot(null)}
-                            defaultValue=""
-                          >
-                             <option value="" disabled>Choisir un plat...</option>
-                             {dishes.filter(d => d.category === type).map(d => (
-                               <option key={d.id} value={d.id}>{d.name}</option>
-                             ))}
-                          </select>
-                        ) : (
-                          <div 
-                            onClick={() => setEditingSlot({day, type})}
-                            className={`
-                              p-3 rounded-lg cursor-pointer border border-transparent transition-all group relative
-                              ${dish ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-[var(--role-color)]' : 'bg-gray-50 dark:bg-white/5 border-dashed border-gray-300 text-gray-400 hover:bg-gray-100'}
-                            `}
-                          >
-                            {dish ? (
-                              <>
-                                <div className="font-semibold text-sm">{dish.name}</div>
-                                <div className="text-[10px] text-gray-500 mt-1 truncate">{dish.ingredients}</div>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-2 text-xs italic"><Plus size={12}/> Ajouter</div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-               </tr>
-             ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-white/5">
+              <tr>
+                <th className="px-6 py-4 text-left font-bold text-gray-500 uppercase tracking-wider text-xs">Jour</th>
+                <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Petit Déjeuner</th>
+                <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Déjeuner</th>
+                <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Goûter</th>
+                <th className="px-6 py-4 text-left font-bold text-[var(--role-color)] uppercase tracking-wider text-xs">Dîner</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {Object.keys(weeklyPlan).map(day => (
+                <tr key={day} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-5 font-bold text-base">{day}</td>
+                    {(['PtDej', 'Dej', 'Gouter', 'Diner'] as MealType[]).map(type => {
+                      const dishId = weeklyPlan[day][type];
+                      const dish = getDish(dishId);
+                      return (
+                        <td key={type} className="px-6 py-4">
+                          {editingSlot?.day === day && editingSlot?.type === type ? (
+                            <select 
+                              className="w-full p-2.5 rounded-lg border border-[var(--role-color)] shadow-sm bg-white dark:bg-gray-800 text-sm focus:outline-none"
+                              onChange={(e) => handleAssignDish(e.target.value)}
+                              autoFocus
+                              onBlur={() => setEditingSlot(null)}
+                              defaultValue=""
+                            >
+                              <option value="" disabled>Choisir un plat...</option>
+                              {dishes.filter(d => d.category === type).map(d => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div 
+                              onClick={() => setEditingSlot({day, type})}
+                              className={`
+                                p-3 rounded-lg cursor-pointer border border-transparent transition-all group relative min-w-[140px]
+                                ${dish ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-[var(--role-color)]' : 'bg-gray-50 dark:bg-white/5 border-dashed border-gray-300 text-gray-400 hover:bg-gray-100'}
+                              `}
+                            >
+                              {dish ? (
+                                <>
+                                  <div className="font-semibold text-sm">{dish.name}</div>
+                                  <div className="text-[10px] text-gray-500 mt-1 truncate">{dish.ingredients}</div>
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-2 text-xs italic"><Plus size={12}/> Ajouter</div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1534,6 +1535,38 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
      </div>
   );
 
+  // --- INSTALL APP LOGIC ---
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult: any) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        setDeferredPrompt(null);
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0f172a] transition-colors duration-300 font-sans text-sm text-gray-800 dark:text-gray-200">
        <Sidebar 
@@ -1542,6 +1575,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
           onItemClick={(item) => { setActiveMenu(item); setIsSidebarOpen(false); }} 
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
+          onInstall={deferredPrompt ? handleInstallClick : undefined}
        />
 
        <div className="lg:pl-[270px] min-h-screen flex flex-col transition-all duration-300">
@@ -1555,7 +1589,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
             onNavigate={(page) => setActiveMenu(page)}
           />
 
-          <main className="flex-1 p-4 md:p-8 pt-24 md:pt-28">
+          <main className="flex-1 p-4 md:p-8 pt-24 md:pt-28 overflow-x-hidden">
              <div className="max-w-7xl mx-auto h-full">
                 {activeMenu === 'Tableau de bord' && renderDashboardContent()}
                 {activeMenu === 'Caisse' && renderCaisse()}
