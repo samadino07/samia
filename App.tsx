@@ -12,10 +12,11 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
 import { 
-  TrendingUp, TrendingDown, Users, ShoppingCart, 
+  TrendingUp, TrendingDown, Users, ShoppingCart, AlertTriangle, 
   Plus, Minus, CheckCircle, Clock, Package, Search, X,
-  User as UserIcon, Shirt,
-  Utensils, Printer, FileSpreadsheet, Download, PieChart as PieChartIcon,
+  Calendar, Coffee, Sun, CloudSun, Moon, DollarSign, Edit3,
+  User as UserIcon, Shirt, 
+  Utensils, FileText, Printer, Briefcase, UserCheck, UserX, FileSpreadsheet, Download, PieChart as PieChartIcon,
   Wallet, Banknote, CreditCard, UserPlus
 } from 'lucide-react';
 
