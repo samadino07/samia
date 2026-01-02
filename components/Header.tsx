@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 import { SITE_OPTIONS, LOGO_URL } from '../constants';
-import { Bell, Moon, Sun, LogOut, Menu, ChevronDown } from 'lucide-react';
+import { Bell, Moon, Sun, LogOut, Menu, ChevronDown, CalendarDays } from 'lucide-react';
 
 interface HeaderProps {
   user: User;
@@ -99,13 +99,21 @@ export const Header: React.FC<HeaderProps> = ({ user, currentSite, onSiteChange,
 
       {/* Right Section: User Profile & Actions */}
       <div className="flex items-center gap-3 md:gap-6">
-        {/* User Role Badge (Desktop) */}
+        {/* Date & Time (Hidden on very small screens, visible on Tablet/PC) */}
         <div className="hidden md:flex flex-col items-end border-r border-gray-200 dark:border-white/10 pr-6 mr-2">
-           <span className="text-xs font-bold text-[var(--role-color)] uppercase tracking-wider mb-0.5 drop-shadow-sm filter brightness-110">
-             {user.role}
-           </span>
-           <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono tracking-widest">
+           <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-[10px] uppercase tracking-wider font-semibold">
+              <CalendarDays size={12} className="text-[var(--role-color)]"/>
+              {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}
+           </div>
+           <span className="text-base font-mono font-bold text-gray-800 dark:text-gray-200 leading-tight">
              {currentTime.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+           </span>
+        </div>
+
+        {/* User Role (Mobile only simplified) */}
+        <div className="md:hidden flex flex-col items-end mr-2">
+           <span className="text-[10px] font-bold text-[var(--role-color)] uppercase tracking-wider">
+             {user.role.split(' ')[0]}
            </span>
         </div>
 
@@ -118,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({ user, currentSite, onSiteChange,
             {darkMode ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           
-          <div className="h-8 w-[1px] bg-gray-200 dark:bg-white/10 mx-1"></div>
+          <div className="h-8 w-[1px] bg-gray-200 dark:bg-white/10 mx-1 hidden md:block"></div>
 
           <button 
             onClick={onLogout} 

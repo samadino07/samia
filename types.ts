@@ -25,3 +25,12 @@ export interface LoginCredentials {
   username: string;
   role: UserRole;
 }
+
+export interface ActionLog {
+  id: string;
+  actor: string; // Qui a fait l'action
+  action: string; // Quoi
+  target: string; // Sur qui/quoi
+  date: string; // Quand
+  type: 'info' | 'warning' | 'danger';
+}

@@ -14,7 +14,8 @@ import {
   BarChart3, 
   Clock,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ const getIconForMenuItem = (item: string) => {
     case 'Les employés': return Users;
     case 'Rapports': return BarChart3;
     case 'Présence': return Clock;
+    case 'Paramètres': return Settings;
     default: return ChevronRight;
   }
 };

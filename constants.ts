@@ -39,7 +39,7 @@ export const MOCK_USERS = [
 ];
 
 export const MENU_ITEMS: Record<UserRole, string[]> = {
-  [UserRole.Boss]: ['Tableau de bord','Caisse','Gestion de stock','Planning des repas','Appartements','Blanchisserie','Bons de restauration','Les employés','Rapports'],
+  [UserRole.Boss]: ['Tableau de bord','Caisse','Gestion de stock','Planning des repas','Appartements','Blanchisserie','Bons de restauration','Les employés','Rapports', 'Paramètres'],
   [UserRole.Gerant]: ['Tableau de bord','Caisse','Gestion de stock','Planning des repas','Appartements','Blanchisserie','Bons de restauration','Les employés','Rapports'],
   [UserRole.ChefCuisine]: ['Tableau de bord','Gestion de stock','Planning des repas','Bons de restauration'],
   [UserRole.Magasinier]: ['Tableau de bord','Gestion de stock'],

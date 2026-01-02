@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, UserRole } from './types';
+import { User, UserRole, ActionLog, SiteOption } from './types';
 import { AuthService } from './services/authService';
-import { ROLES, MOCK_USERS, LOGO_URL } from './constants';
+import { ROLES, MOCK_USERS, LOGO_URL, SITE_OPTIONS } from './constants';
 import { Input } from './components/Input';
 import { Button } from './components/Button';
 import { Header } from './components/Header';
@@ -18,22 +18,21 @@ import {
   User as UserIcon, Shirt, 
   Utensils, FileText, Printer, Briefcase, UserCheck, UserX, FileSpreadsheet, Download, PieChart as PieChartIcon,
   Wallet, Banknote, CreditCard, UserPlus, LogOut, ArrowRight, Loader2, Home, Lock, User as UserProfileIcon,
-  FolderOpen, Tag, Coins, Layers, ChevronDown, MoreHorizontal, ChefHat, Truck
+  FolderOpen, Tag, Coins, Layers, ChevronDown, MoreHorizontal, ChefHat, Truck, Shield, Key, Trash2, History, Save,
+  Filter, Activity
 } from 'lucide-react';
 
 // --- Loading Screen Component ---
-// (KEPT EXACTLY AS IS)
 const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onFinished();
-    }, 2500); // 2.5 seconds loading time
+    }, 2500);
     return () => clearTimeout(timer);
   }, [onFinished]);
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center text-white overflow-hidden">
-      {/* Background Gradient Blob */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-gold/10 rounded-full blur-[120px] animate-pulse-slow"></div>
       
       <div className="relative z-10 flex flex-col items-center animate-fade-in">
@@ -57,8 +56,7 @@ const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
   );
 };
 
-// --- WIDGETS (UPDATED STYLES) ---
-
+// --- WIDGETS ---
 const StatWidget = ({ title, value, subtext, icon: Icon, trend }: any) => (
   <div className="dashboard-card group relative hover:-translate-y-1 transition-transform duration-300">
     <div className="flex justify-between items-start">
@@ -76,11 +74,10 @@ const StatWidget = ({ title, value, subtext, icon: Icon, trend }: any) => (
       </div>
     </div>
     <div className="mt-4 flex items-center text-xs font-medium relative z-10">
-      {trend === 'up' && <span className="flex items-center text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded mr-2"><TrendingUp size={12} className="mr-1" /> +12%</span>}
-      {trend === 'down' && <span className="flex items-center text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded mr-2"><TrendingDown size={12} className="mr-1" /> -5%</span>}
+      {trend === 'up' && <span className="flex items-center text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded mr-2"><TrendingUp size={12} className="mr-1" /> +0%</span>}
+      {trend === 'down' && <span className="flex items-center text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded mr-2"><TrendingDown size={12} className="mr-1" /> -0%</span>}
       <span className="text-gray-400 dark:text-gray-500">{subtext}</span>
     </div>
-    {/* Decorative BG */}
     <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[var(--role-color)] opacity-[0.03] rounded-full blur-2xl group-hover:opacity-[0.07] transition-opacity"></div>
   </div>
 );
@@ -100,33 +97,36 @@ const InteractiveStockWidget = ({ items, onUpdate }: any) => {
         </button>
       </div>
       <div className="space-y-3">
-        {items.slice(0, 5).map((item: any, idx: number) => (
-          <div key={idx} className="group flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-[var(--border-color)]">
-            <div className="flex items-center gap-4">
-               {/* Status Dot */}
-               <div className={`w-2 h-2 rounded-full ring-4 ring-opacity-20 ${item.quantite <= item.seuilCritique ? 'bg-rose-500 ring-rose-500' : 'bg-emerald-500 ring-emerald-500'}`}></div>
-               <div>
-                  <div className="font-semibold text-sm">{item.nom}</div>
-                  <div className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{item.cat}</div>
-               </div>
+        {items.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 text-sm">Aucun article en stock</div>
+        ) : (
+          items.slice(0, 5).map((item: any, idx: number) => (
+            <div key={idx} className="group flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-[var(--border-color)]">
+              <div className="flex items-center gap-4">
+                <div className={`w-2 h-2 rounded-full ring-4 ring-opacity-20 ${item.quantite <= item.seuilCritique ? 'bg-rose-500 ring-rose-500' : 'bg-emerald-500 ring-emerald-500'}`}></div>
+                <div>
+                    <div className="font-semibold text-sm">{item.nom}</div>
+                    <div className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{item.cat}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1f2937] rounded-lg p-1 border border-[var(--border-color)]">
+                <button 
+                  onClick={() => onUpdate(idx, -1)}
+                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-rose-500 hover:shadow-sm transition-all"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="font-mono font-bold w-10 text-center text-sm">{item.quantite}</span>
+                <button 
+                  onClick={() => onUpdate(idx, 1)}
+                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-500 hover:shadow-sm transition-all"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1f2937] rounded-lg p-1 border border-[var(--border-color)]">
-              <button 
-                onClick={() => onUpdate(idx, -1)}
-                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-rose-500 hover:shadow-sm transition-all"
-              >
-                <Minus size={14} />
-              </button>
-              <span className="font-mono font-bold w-10 text-center text-sm">{item.quantite}</span>
-              <button 
-                onClick={() => onUpdate(idx, 1)}
-                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-500 hover:shadow-sm transition-all"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
@@ -161,20 +161,24 @@ const InteractiveOrdersWidget = ({ orders, onStatusChange }: any) => {
             </tr>
           </thead>
           <tbody className="space-y-2">
-            {orders.map((order: any, idx: number) => (
-              <tr key={idx} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                <td className="font-medium pl-4">{order.produit}</td>
-                <td className="font-mono text-gray-500">{order.quantite}</td>
-                <td className="pr-4">
-                  <button 
-                    onClick={() => onStatusChange(idx)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all hover:scale-105 active:scale-95 ${getStatusColor(order.statut)}`}
-                  >
-                    {order.statut}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {orders.length === 0 ? (
+               <tr><td colSpan={3} className="text-center py-4 text-gray-400">Aucune commande en cours</td></tr>
+            ) : (
+              orders.map((order: any, idx: number) => (
+                <tr key={idx} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="font-medium pl-4">{order.produit}</td>
+                  <td className="font-mono text-gray-500">{order.quantite}</td>
+                  <td className="pr-4">
+                    <button 
+                      onClick={() => onStatusChange(idx)}
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all hover:scale-105 active:scale-95 ${getStatusColor(order.statut)}`}
+                    >
+                      {order.statut}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -182,7 +186,6 @@ const InteractiveOrdersWidget = ({ orders, onStatusChange }: any) => {
   );
 };
 
-// ... [Chart Widgets - Enhanced visuals] ...
 const RevenueChartWidget = ({ data }: any) => (
   <div className="dashboard-card col-span-1 lg:col-span-3 h-[340px]">
     <div className="flex justify-between items-center mb-6">
@@ -202,7 +205,7 @@ const RevenueChartWidget = ({ data }: any) => (
         </defs>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
         <XAxis dataKey="name" tick={{fill: '#94a3b8', fontSize: 11}} axisLine={false} tickLine={false} dy={10} />
-        <YAxis tick={{fill: '#94a3b8', fontSize: 11}} axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+        <YAxis tick={{fill: '#94a3b8', fontSize: 11}} axisLine={false} tickLine={false} tickFormatter={(value) => `${value} DH`} />
         <RechartsTooltip 
           contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
           itemStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
@@ -216,9 +219,9 @@ const RevenueChartWidget = ({ data }: any) => (
 
 const OccupancyChartWidget = () => {
   const data = [
-    { name: 'Occupés', value: 12, color: '#3b82f6' },
-    { name: 'Libres', value: 3, color: '#10b981' },
-    { name: 'Maintenance', value: 1, color: '#f43f5e' },
+    { name: 'Occupés', value: 0, color: '#3b82f6' },
+    { name: 'Libres', value: 100, color: '#10b981' },
+    { name: 'Maintenance', value: 0, color: '#f43f5e' },
   ];
 
   return (
@@ -245,9 +248,8 @@ const OccupancyChartWidget = () => {
             <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', backgroundColor: 'rgba(255,255,255,0.9)' }} />
           </PieChart>
         </ResponsiveContainer>
-        {/* Center Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-           <span className="text-3xl font-bold tracking-tight">75%</span>
+           <span className="text-3xl font-bold tracking-tight">0%</span>
            <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-widest mt-1">Taux Global</span>
         </div>
       </div>
@@ -266,11 +268,10 @@ const OccupancyChartWidget = () => {
   );
 };
 
-// ... [Types, Interfaces, Helpers kept same] ...
+// ... [Types & Interfaces] ...
 type MealType = 'PtDej' | 'Dej' | 'Gouter' | 'Diner';
 type HebergementType = '1/1' | '1/2' | '1/3' | '1/4';
 
-// (Keeping interfaces exactly as before to maintain content)
 interface Dish { id: string; name: string; category: MealType; ingredients: string; cost: number; }
 interface DailyPlan { PtDej?: string; Dej?: string; Gouter?: string; Diner?: string; }
 interface Client { id: string; name: string; entryDate: string; type: HebergementType; }
@@ -293,10 +294,6 @@ const generateApartments = (): Apartment[] => {
   for(let i=1; i<=16; i++) apts.push({ id: `F-B-${i}`, number: `B-${i}`, building: 'Imm. Bouzaghlal', site: 'Fnidaq', capacity: i <= 12 ? 4 : 2, currentClients: [], history: [] });
   for(let i=1; i<=12; i++) apts.push({ id: `M-${i}`, number: `M-${i}`, building: 'Résidence M\'dik', site: "M'dik", capacity: i <= 11 ? 4 : 2, currentClients: [], history: [] });
   for(let i=1; i<=8; i++) apts.push({ id: `A-${i}`, number: `AH-${i}`, building: 'Résidence Al Hoceima', site: 'Al Hoceima', capacity: 4, currentClients: [], history: [] });
-  if(apts[0]) {
-    apts[0].currentClients = [{ id: 'mock-1', name: 'Karim Tazi', entryDate: '2025-01-01', type: '1/4' }];
-    apts[0].history = [{ clientName: 'Said Alami', entryDate: '2024-12-25', leaveDate: '2024-12-30', type: '1/3' }];
-  }
   return apts;
 };
 
@@ -307,82 +304,170 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tout');
 
-  // [State declarations kept same]
-  const [stockItems, setStockItems] = useState([
-    {nom:'Lait', cat:'Produits Laitiers', quantite:12, seuilCritique:5, unite:'L', prix:15}, 
-    {nom:'Fromage Rouge', cat:'Produits Laitiers', quantite:2, seuilCritique:5, unite:'kg', prix:90},
-    {nom:'Beurre', cat:'Produits Laitiers', quantite:5, seuilCritique:3, unite:'kg', prix:80},
-    {nom:'Pain', cat:'Boulangerie', quantite:30, seuilCritique:10, unite:'pcs', prix:2}, 
-    {nom:'Croissant', cat:'Boulangerie', quantite:15, seuilCritique:10, unite:'pcs', prix:3},
-    {nom:'Viande Hachée', cat:'Boucherie', quantite:0, seuilCritique:2, unite:'kg', prix:95}, 
-    {nom:'Poulet', cat:'Boucherie', quantite:10, seuilCritique:5, unite:'kg', prix:35},
-    {nom:'Pommes', cat:'Fruits & Légumes', quantite:8, seuilCritique:5, unite:'kg', prix:15}, 
-    {nom:'Tomates', cat:'Fruits & Légumes', quantite:15, seuilCritique:5, unite:'kg', prix:6},
-    {nom:'Eau Minérale', cat:'Boissons', quantite:120, seuilCritique:24, unite:'Bouteille', prix:4}, 
-    {nom:'Soda', cat:'Boissons', quantite:50, seuilCritique:20, unite:'Canette', prix:5}
-  ]);
-  const [chefOrders, setChefOrders] = useState([{produit:'Lait', quantite:5, statut:'En attente', date:'2026-01-02'}, {produit:'Pain', quantite:10, statut:'Livré', date:'2026-01-01'}, {produit:'Café', quantite:2, statut:'En cours', date:'2026-01-03'}]);
-  const [dishes, setDishes] = useState<Dish[]>([{ id: '1', name: 'Omelette Fromage', category: 'PtDej', ingredients: 'Oeufs, Fromage, Huile', cost: 12 }, { id: '2', name: 'Msemmen Miel', category: 'PtDej', ingredients: 'Farine, Beurre, Miel', cost: 5 }, { id: '3', name: 'Tagine Poulet', category: 'Dej', ingredients: 'Poulet, Oignon, Olives, Citron', cost: 45 }, { id: '4', name: 'Salade César', category: 'Dej', ingredients: 'Laitue, Poulet, Croutons, Sauce', cost: 25 }, { id: '5', name: 'Crêpe Chocolat', category: 'Gouter', ingredients: 'Farine, Lait, Chocolat', cost: 8 }, { id: '6', name: 'Soupe Légumes', category: 'Diner', ingredients: 'Carottes, Pommes de terre, Poireaux', cost: 10 }, { id: '7', name: 'Grillade Mixte', category: 'Diner', ingredients: 'Viande hachée, Poulet, Merguez', cost: 60 }]);
-  const [weeklyPlan, setWeeklyPlan] = useState<Record<string, DailyPlan>>({'Lundi': { PtDej: '1', Dej: '3', Gouter: '5', Diner: '6' }, 'Mardi': { PtDej: '2', Dej: '4', Gouter: '5', Diner: '7' }, 'Mercredi': { PtDej: '1', Dej: '3', Gouter: '5', Diner: '6' }, 'Jeudi': { PtDej: '2', Dej: '4', Gouter: '5', Diner: '7' }, 'Vendredi': { PtDej: '1', Dej: '3', Gouter: '5', Diner: '6' }, 'Samedi': { PtDej: '2', Dej: '7', Gouter: '5', Diner: '6' }, 'Dimanche': { PtDej: '1', Dej: '7', Gouter: '5', Diner: '4' }});
+  // --- SETTINGS STATE (Initialized from LocalStorage via AuthService) ---
+  const [allUsers, setAllUsers] = useState<User[]>(() => AuthService.getUsers());
+  const [actionLogs, setActionLogs] = useState<ActionLog[]>(() => {
+    const saved = localStorage.getItem('rs_manager_logs');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [newUser, setNewUser] = useState<Partial<User>>({ role: UserRole.Reception });
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [settingsTab, setSettingsTab] = useState<'users' | 'logs'>('users');
+  const [userSearch, setUserSearch] = useState('');
+
+  // [State declarations]
+  const [stockItems, setStockItems] = useState<any[]>([]); 
+  const [chefOrders, setChefOrders] = useState<any[]>([]); 
+  const [dishes, setDishes] = useState<Dish[]>([]); 
+  const [weeklyPlan, setWeeklyPlan] = useState<Record<string, DailyPlan>>({
+    'Lundi': {}, 'Mardi': {}, 'Mercredi': {}, 'Jeudi': {}, 'Vendredi': {}, 'Samedi': {}, 'Dimanche': {}
+  }); 
+  
   const [editingSlot, setEditingSlot] = useState<{day: string, type: MealType} | null>(null);
   const [showDishForm, setShowDishForm] = useState(false);
   const [newDish, setNewDish] = useState<Partial<Dish>>({ category: 'PtDej', cost: 0 });
+  
   const [apartments, setApartments] = useState<Apartment[]>(() => generateApartments());
   const [selectedApt, setSelectedApt] = useState<Apartment | null>(null);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [newClient, setNewClient] = useState<{name: string, date: string, type: HebergementType}>({name: '', date: new Date().toISOString().split('T')[0], type: '1/4'});
   const [clientSearchQuery, setClientSearchQuery] = useState('');
-  const [laundryOrders, setLaundryOrders] = useState<LaundryOrder[]>([{ id: '101', clientId: 'mock-1', clientName: 'Karim Tazi', apartmentNumber: 'N°1', site: 'Fnidaq', items: '2 Chemises, 1 Pantalon', date: '2025-01-02', status: 'En attente' }]);
+  
+  const [laundryOrders, setLaundryOrders] = useState<LaundryOrder[]>([]); 
   const [showLaundryForm, setShowLaundryForm] = useState(false);
   const [newLaundryOrder, setNewLaundryOrder] = useState({ apartmentId: '', clientId: '', items: '' });
-  const [restaurantOrders, setRestaurantOrders] = useState<RestaurantOrder[]>([]);
+  
+  const [restaurantOrders, setRestaurantOrders] = useState<RestaurantOrder[]>([]); 
   const [currentMealService, setCurrentMealService] = useState<MealType>('PtDej');
   const [newRestoOrder, setNewRestoOrder] = useState<{clientId: string; drinks: string[]; isDrinkOnly: boolean;}>({clientId: '', drinks: [], isDrinkOnly: false});
   const [showBonModal, setShowBonModal] = useState<RestaurantOrder | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([{ id: 'e1', name: 'Ahmed', function: 'Sécurité', phone: '0661000000', shift: 'Soir', monthlySalary: 3500, lastMonthSalary: 3500, absences: 0, status: 'Présent' }, { id: 'e2', name: 'Fatima', function: 'Femme de ménage', phone: '0662000000', shift: 'Matin', monthlySalary: 3000, lastMonthSalary: 2900, absences: 2, status: 'Absent' }, { id: 'e3', name: 'Youssef', function: 'Réceptionniste', phone: '0663000000', shift: 'Jour', monthlySalary: 4000, lastMonthSalary: 4000, absences: 0, status: 'En retard' }]);
+  
+  const [employees, setEmployees] = useState<Employee[]>([]); 
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({ shift: 'Jour', monthlySalary: 0 });
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [cashFunds, setCashFunds] = useState<CashFund[]>([{ id: 'cf1', amount: 5000, date: '2025-01-01', addedBy: 'Boss' }, { id: 'cf2', amount: 2000, date: '2025-01-10', addedBy: 'Boss' }]);
-  const [cashExpenses, setCashExpenses] = useState<CashExpense[]>([{ id: 'ce1', category: 'Gazoil', amount: 300, date: '2025-01-05', observation: 'Transport Marchandise', addedBy: 'Gérant Fnidaq' }, { id: 'ce2', category: 'Maintenance', amount: 150, date: '2025-01-12', observation: 'Ampoules', addedBy: 'Gérant M\'dik' }]);
+  
+  const [cashFunds, setCashFunds] = useState<CashFund[]>([]); 
+  const [cashExpenses, setCashExpenses] = useState<CashExpense[]>([]); 
   const [showFundForm, setShowFundForm] = useState(false);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [newFundAmount, setNewFundAmount] = useState('');
   const [newExpense, setNewExpense] = useState({ category: '', amount: '', observation: '' });
+  
   const [newProduct, setNewProduct] = useState({ nom: '', cat: '', quantite: 0, unite: '', prix: 0 });
   const [newOrder, setNewOrder] = useState({ produit: '', quantite: 1 });
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const revenueData = [{ name: 'Lun', revenu: 4000 }, { name: 'Mar', revenu: 3000 }, { name: 'Mer', revenu: 2000 }, { name: 'Jeu', revenu: 2780 }, { name: 'Ven', revenu: 1890 }, { name: 'Sam', revenu: 2390 }, { name: 'Dim', revenu: 3490 }];
+  // Reset Revenue Data to 0
+  const revenueData = [
+    { name: 'Lun', revenu: 0 }, 
+    { name: 'Mar', revenu: 0 }, 
+    { name: 'Mer', revenu: 0 }, 
+    { name: 'Jeu', revenu: 0 }, 
+    { name: 'Ven', revenu: 0 }, 
+    { name: 'Sam', revenu: 0 }, 
+    { name: 'Dim', revenu: 0 }
+  ];
 
-  // [UseEffects and Handlers kept same]
+  // [UseEffects and Handlers]
   useEffect(() => {
-    const today = new Date();
-    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const dayBefore = new Date(today); dayBefore.setDate(dayBefore.getDate() - 2);
-    const fmt = (d: Date) => d.toISOString().split('T')[0];
-    const mockRestoData: RestaurantOrder[] = [{ id: 'r1', type: 'Repas', mealType: 'PtDej', clientId: 'mock-1', clientName: 'Karim Tazi', aptNumber: 'N°1', site: 'Fnidaq', date: fmt(yesterday), time: '08:30', items: ['Eau'] }, { id: 'r2', type: 'Repas', mealType: 'Dej', clientId: 'mock-1', clientName: 'Karim Tazi', aptNumber: 'N°1', site: 'Fnidaq', date: fmt(yesterday), time: '13:00', items: ['Soda'] }, { id: 'r3', type: 'Repas', mealType: 'Diner', clientId: 'mock-1', clientName: 'Karim Tazi', aptNumber: 'N°1', site: 'Fnidaq', date: fmt(dayBefore), time: '20:00', items: ['Jus'] }, { id: 'r4', type: 'Repas', mealType: 'PtDej', clientId: 'mock-1', clientName: 'Karim Tazi', aptNumber: 'N°1', site: 'Fnidaq', date: fmt(dayBefore), time: '09:00', items: [] }];
-    setRestaurantOrders(mockRestoData);
     const hour = new Date().getHours();
     if (hour < 11) setCurrentMealService('PtDej'); else if (hour < 15) setCurrentMealService('Dej'); else if (hour < 18) setCurrentMealService('Gouter'); else setCurrentMealService('Diner');
   }, []);
 
-  const handleStockUpdate = (index: number, change: number) => { const newStock = [...stockItems]; if (newStock[index].quantite + change >= 0) { newStock[index].quantite += change; setStockItems(newStock); } };
+  // --- ACTION LOGGING HELPER (With Persistence) ---
+  const logAction = (action: string, target: string, type: 'info' | 'warning' | 'danger' = 'info') => {
+    const log: ActionLog = {
+      id: Date.now().toString(),
+      actor: user?.username || 'Inconnu',
+      action,
+      target,
+      date: new Date().toLocaleString('fr-FR'),
+      type
+    };
+    
+    // Update local state and persistence
+    const updatedLogs = [log, ...actionLogs];
+    setActionLogs(updatedLogs);
+    localStorage.setItem('rs_manager_logs', JSON.stringify(updatedLogs));
+  };
+
+  // --- SETTINGS HANDLERS (With Persistence) ---
+  
+  const handleAddUser = () => {
+    if (newUser.username && newUser.password && newUser.role) {
+      if (allUsers.find(u => u.username === newUser.username)) {
+        alert("Cet identifiant existe déjà.");
+        return;
+      }
+      const u: User = {
+        username: newUser.username,
+        password: newUser.password,
+        role: newUser.role as UserRole,
+        site: newUser.site
+      };
+      
+      const updatedUsers = [...allUsers, u];
+      setAllUsers(updatedUsers);
+      AuthService.saveUsers(updatedUsers); // PERSIST
+      
+      logAction('Création compte', u.username, 'info');
+      setNewUser({ role: UserRole.Reception });
+      setShowUserForm(false);
+    }
+  };
+
+  const handleDeleteUser = (username: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer ce compte ?")) {
+      const updatedUsers = allUsers.filter(u => u.username !== username);
+      setAllUsers(updatedUsers);
+      AuthService.saveUsers(updatedUsers); // PERSIST
+      
+      logAction('Suppression compte', username, 'danger');
+    }
+  };
+
+  const handleUpdatePassword = () => {
+    if (editingUser && newPassword) {
+      const updatedUsers = allUsers.map(u => 
+        u.username === editingUser.username ? { ...u, password: newPassword } : u
+      );
+      setAllUsers(updatedUsers);
+      AuthService.saveUsers(updatedUsers); // PERSIST
+      
+      logAction('Changement mot de passe', editingUser.username, 'warning');
+      setEditingUser(null);
+      setNewPassword('');
+    }
+  };
+
+  const handleStockUpdate = (index: number, change: number) => { 
+    const newStock = [...stockItems]; 
+    if (newStock[index].quantite + change >= 0) { 
+      newStock[index].quantite += change; 
+      setStockItems(newStock); 
+      logAction('Mise à jour stock', `${newStock[index].nom} (${change > 0 ? '+' : ''}${change})`, 'info');
+    } 
+  };
+  
   const handleStatusChange = (index: number) => { const newOrders = [...chefOrders]; const current = newOrders[index].statut; if (current === 'En attente') newOrders[index].statut = 'En cours'; else if (current === 'En cours') newOrders[index].statut = 'Livré'; else if (current === 'Livré') newOrders[index].statut = 'En attente'; setChefOrders(newOrders); };
   const handleAddProduct = () => { if (newProduct.nom && newProduct.cat) { setStockItems([...stockItems, { ...newProduct, seuilCritique: 5 }]); setNewProduct({ nom: '', cat: '', quantite: 0, unite: '', prix: 0 }); setShowAddForm(false); } };
   const handleAddDish = () => { if(newDish.name && newDish.cost && newDish.ingredients) { const dish: Dish = { id: Date.now().toString(), name: newDish.name || 'Sans nom', category: newDish.category as MealType, ingredients: newDish.ingredients || '', cost: Number(newDish.cost) }; setDishes([...dishes, dish]); setNewDish({ category: 'PtDej', cost: 0, name: '', ingredients: '' }); setShowDishForm(false); } };
   const handleAssignDish = (dishId: string) => { if (editingSlot) { setWeeklyPlan({ ...weeklyPlan, [editingSlot.day]: { ...weeklyPlan[editingSlot.day], [editingSlot.type]: dishId } }); setEditingSlot(null); } };
   const getDish = (id?: string) => dishes.find(d => d.id === id);
-  const handleCheckIn = () => { if (selectedApt && newClient.name && newClient.date) { const updatedApts = apartments.map(apt => { if (apt.id === selectedApt.id) { const currentOccupancy = apt.currentClients.length; const roomType = currentOccupancy > 0 ? apt.currentClients[0].type : newClient.type; const maxOccupants = getMaxOccupants(roomType); if (currentOccupancy >= maxOccupants) { alert(`Cet appartement est plein (${maxOccupants} pers max pour ${roomType}).`); return apt; } const clientToAdd: Client = { id: Date.now().toString(), name: newClient.name, entryDate: newClient.date, type: roomType }; return { ...apt, currentClients: [...apt.currentClients, clientToAdd] }; } return apt; }); setApartments(updatedApts); setShowCheckInModal(false); setNewClient({ name: '', date: new Date().toISOString().split('T')[0], type: '1/4' }); } };
-  const handleCheckOut = (clientId: string) => { if (selectedApt) { const leaveDate = new Date().toISOString().split('T')[0]; const clientToRemove = selectedApt.currentClients.find(c => c.id === clientId); if(!clientToRemove) return; const historyEntry: ClientHistory = { clientName: clientToRemove.name, entryDate: clientToRemove.entryDate, leaveDate: leaveDate, type: clientToRemove.type }; const updatedApts = apartments.map(apt => { if (apt.id === selectedApt.id) { return { ...apt, currentClients: apt.currentClients.filter(c => c.id !== clientId), history: [historyEntry, ...apt.history] }; } return apt; }); setApartments(updatedApts); const updatedSelectedApt = updatedApts.find(a => a.id === selectedApt.id) || null; setSelectedApt(updatedSelectedApt); } };
+  const handleCheckIn = () => { if (selectedApt && newClient.name && newClient.date) { const updatedApts = apartments.map(apt => { if (apt.id === selectedApt.id) { const currentOccupancy = apt.currentClients.length; const roomType = currentOccupancy > 0 ? apt.currentClients[0].type : newClient.type; const maxOccupants = getMaxOccupants(roomType); if (currentOccupancy >= maxOccupants) { alert(`Cet appartement est plein (${maxOccupants} pers max pour ${roomType}).`); return apt; } const clientToAdd: Client = { id: Date.now().toString(), name: newClient.name, entryDate: newClient.date, type: roomType }; return { ...apt, currentClients: [...apt.currentClients, clientToAdd] }; } return apt; }); setApartments(updatedApts); setShowCheckInModal(false); setNewClient({ name: '', date: new Date().toISOString().split('T')[0], type: '1/4' }); logAction('Check-in', `${newClient.name} -> ${selectedApt.number}`, 'info'); } };
+  const handleCheckOut = (clientId: string) => { if (selectedApt) { const leaveDate = new Date().toISOString().split('T')[0]; const clientToRemove = selectedApt.currentClients.find(c => c.id === clientId); if(!clientToRemove) return; const historyEntry: ClientHistory = { clientName: clientToRemove.name, entryDate: clientToRemove.entryDate, leaveDate: leaveDate, type: clientToRemove.type }; const updatedApts = apartments.map(apt => { if (apt.id === selectedApt.id) { return { ...apt, currentClients: apt.currentClients.filter(c => c.id !== clientId), history: [historyEntry, ...apt.history] }; } return apt; }); setApartments(updatedApts); const updatedSelectedApt = updatedApts.find(a => a.id === selectedApt.id) || null; setSelectedApt(updatedSelectedApt); logAction('Check-out', `${clientToRemove.name}`, 'info'); } };
   const handleAddLaundryOrder = () => { if (!newLaundryOrder.apartmentId || !newLaundryOrder.clientId || !newLaundryOrder.items) return; const apt = apartments.find(a => a.id === newLaundryOrder.apartmentId); const client = apt?.currentClients.find(c => c.id === newLaundryOrder.clientId); if (apt && client) { const order: LaundryOrder = { id: Date.now().toString(), clientId: client.id, clientName: client.name, apartmentNumber: apt.number, site: apt.site, items: newLaundryOrder.items, date: new Date().toISOString().split('T')[0], status: 'En attente' }; setLaundryOrders([order, ...laundryOrders]); setNewLaundryOrder({ apartmentId: '', clientId: '', items: '' }); setShowLaundryForm(false); } };
   const updateLaundryStatus = (id: string, newStatus: LaundryStatus) => { const updated = laundryOrders.map(o => o.id === id ? { ...o, status: newStatus } : o); setLaundryOrders(updated); };
-  const handleValidateRestoOrder = () => { if (!newRestoOrder.clientId) return; let foundClient: Client | undefined; let foundApt: Apartment | undefined; for (const apt of apartments) { const c = apt.currentClients.find(cl => cl.id === newRestoOrder.clientId); if (c) { foundClient = c; foundApt = apt; break; } } if (foundClient && foundApt) { const now = new Date(); const order: RestaurantOrder = { id: Date.now().toString(), type: newRestoOrder.isDrinkOnly ? 'Boisson' : 'Repas', mealType: newRestoOrder.isDrinkOnly ? undefined : currentMealService, clientId: foundClient.id, clientName: foundClient.name, aptNumber: foundApt.number, site: foundApt.site, date: now.toISOString().split('T')[0], time: now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), items: newRestoOrder.drinks }; setRestaurantOrders([order, ...restaurantOrders]); setShowBonModal(order); setNewRestoOrder({ clientId: '', drinks: [], isDrinkOnly: false }); } };
+  const handleValidateRestoOrder = () => { if (!newRestoOrder.clientId) return; let foundClient: Client | undefined; let foundApt: Apartment | undefined; for (const apt of apartments) { const c = apt.currentClients.find(cl => cl.id === newRestoOrder.clientId); if (c) { foundClient = c; foundApt = apt; break; } } if (foundClient && foundApt) { const now = new Date(); const order: RestaurantOrder = { id: Date.now().toString(), type: newRestoOrder.isDrinkOnly ? 'Boisson' : 'Repas', mealType: newRestoOrder.isDrinkOnly ? undefined : currentMealService, clientId: foundClient.id, clientName: foundClient.name, aptNumber: foundApt.number, site: foundApt.site, date: now.toISOString().split('T')[0], time: now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'}), items: newRestoOrder.drinks }; setRestaurantOrders([order, ...restaurantOrders]); setShowBonModal(order); setNewRestoOrder({ clientId: '', drinks: [], isDrinkOnly: false }); logAction('Bon Resto', `${foundClient.name} (${order.type})`, 'info'); } };
   const handleAddEmployee = () => { if(newEmployee.name && newEmployee.function && newEmployee.monthlySalary) { setEmployees([...employees, { id: Date.now().toString(), name: newEmployee.name, function: newEmployee.function, phone: newEmployee.phone || '', shift: newEmployee.shift as 'Matin'|'Soir'|'Jour', monthlySalary: Number(newEmployee.monthlySalary), lastMonthSalary: Number(newEmployee.monthlySalary), absences: 0, status: 'Présent' }]); setShowEmployeeForm(false); setNewEmployee({ shift: 'Jour', monthlySalary: 0, name: '', function: '', phone: '' }); } };
   const updateEmployeeStatus = (id: string, status: 'Présent' | 'Absent' | 'Retard') => { setEmployees(employees.map(e => e.id === id ? { ...e, status } : e)); };
   const updateEmployeeAbsences = (id: string, absences: number) => { setEmployees(employees.map(e => e.id === id ? { ...e, absences } : e)); };
-  const handleAddFund = () => { if (!newFundAmount) return; const amount = parseFloat(newFundAmount); if (isNaN(amount) || amount <= 0) return; const newFund: CashFund = { id: Date.now().toString(), amount, date: new Date().toISOString().split('T')[0], addedBy: user?.username || 'Boss' }; setCashFunds([...cashFunds, newFund]); setNewFundAmount(''); setShowFundForm(false); };
-  const handleAddExpense = () => { if (!newExpense.amount || !newExpense.category) return; const amount = parseFloat(newExpense.amount); if (isNaN(amount) || amount <= 0) return; const expense: CashExpense = { id: Date.now().toString(), category: newExpense.category, amount, observation: newExpense.observation, date: new Date().toISOString().split('T')[0], addedBy: user?.username || 'Gérant' }; setCashExpenses([...cashExpenses, expense]); setNewExpense({ category: '', amount: '', observation: '' }); setShowExpenseForm(false); };
+  const handleAddFund = () => { if (!newFundAmount) return; const amount = parseFloat(newFundAmount); if (isNaN(amount) || amount <= 0) return; const newFund: CashFund = { id: Date.now().toString(), amount, date: new Date().toISOString().split('T')[0], addedBy: user?.username || 'Boss' }; setCashFunds([...cashFunds, newFund]); setNewFundAmount(''); setShowFundForm(false); logAction('Caisse entrée', `${amount} DH`, 'info'); };
+  const handleAddExpense = () => { if (!newExpense.amount || !newExpense.category) return; const amount = parseFloat(newExpense.amount); if (isNaN(amount) || amount <= 0) return; const expense: CashExpense = { id: Date.now().toString(), category: newExpense.category, amount, observation: newExpense.observation, date: new Date().toISOString().split('T')[0], addedBy: user?.username || 'Gérant' }; setCashExpenses([...cashExpenses, expense]); setNewExpense({ category: '', amount: '', observation: '' }); setShowExpenseForm(false); logAction('Dépense', `${amount} DH - ${newExpense.category}`, 'warning'); };
   const handleExport = (type: 'pdf' | 'excel') => { if (type === 'pdf') { window.print(); } else { const csvContent = "data:text/csv;charset=utf-8,Type,Date,Montant\nRevenus,2025-01-01,15000\nDepenses,2025-01-01,5000"; const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", "rapport_financier.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); } };
   const searchResults = useMemo(() => { if (!clientSearchQuery) return []; const results: { id: string; clientName: string; type: HebergementType; entryDate: string; leaveDate: string; status: 'En cours' | 'Terminé'; aptNumber: string; building: string; site: string; apt: Apartment; }[] = []; apartments.forEach(apt => { apt.currentClients.forEach(c => { if (c.name.toLowerCase().includes(clientSearchQuery.toLowerCase())) { results.push({ id: `${apt.id}-${c.id}`, clientName: c.name, type: c.type, entryDate: c.entryDate, leaveDate: '-', status: 'En cours', aptNumber: apt.number, building: apt.building, site: apt.site, apt: apt }); } }); apt.history.forEach((h, idx) => { if (h.clientName.toLowerCase().includes(clientSearchQuery.toLowerCase())) { results.push({ id: `${apt.id}-hist-${idx}`, clientName: h.clientName, type: h.type, entryDate: h.entryDate, leaveDate: h.leaveDate, status: 'Terminé', aptNumber: apt.number, building: apt.building, site: apt.site, apt: apt }); } }); }); return results; }, [clientSearchQuery, apartments]);
 
@@ -450,9 +535,9 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
           </div>
 
           <StatWidget title="Solde Caisse" value={`${caisseBalance.toLocaleString()} DH`} subtext="Disponible" icon={Wallet} trend={caisseBalance > 0 ? "up" : "down"} />
-          <StatWidget title="Revenu du jour" value="2,250 DH" subtext="+12% vs hier" icon={TrendingUp} trend="up" />
+          <StatWidget title="Revenu du jour" value="0 DH" subtext="Aucune donnée" icon={TrendingUp} trend="up" />
           <StatWidget title="Occupation" value={`${Math.round((occupiedCount / apartments.length) * 100)}%`} subtext={`${occupiedCount}/${apartments.length} appts`} icon={Users} trend="neutral" />
-          <StatWidget title="Commandes Chef" value="5 En cours" subtext="Action requise" icon={ShoppingCart} trend="neutral" />
+          <StatWidget title="Commandes Chef" value={`${chefOrders.filter(o => o.statut !== 'Livré').length} En cours`} subtext="Action requise" icon={ShoppingCart} trend="neutral" />
 
           <RevenueChartWidget data={revenueData} />
           <OccupancyChartWidget />
@@ -462,6 +547,269 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
       );
     } 
     return <div className="p-8 dashboard-card text-center text-gray-500">Vue non configurée pour ce rôle.</div>;
+  };
+
+  const renderSettings = () => {
+    // SECURITY CHECK: Only Boss can see this
+    if (user.role !== UserRole.Boss) {
+      return (
+        <div className="dashboard-card p-10 flex flex-col items-center justify-center text-center">
+           <Shield size={48} className="text-red-500 mb-4" />
+           <h2 className="text-2xl font-bold text-red-600 mb-2">Accès Refusé</h2>
+           <p className="text-gray-500">Seul le Boss a accès à ces paramètres.</p>
+        </div>
+      );
+    }
+
+    const filteredUsers = allUsers.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()));
+
+    return (
+      <div className="animate-fade-in space-y-6 pb-24 md:pb-6">
+         {/* Top Actions: Search & Add */}
+         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-2">
+            <div className="w-full md:w-auto flex gap-4 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl self-start">
+               <button 
+                 onClick={() => setSettingsTab('users')}
+                 className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${settingsTab === 'users' ? 'bg-white dark:bg-gray-700 shadow text-[var(--role-color)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+               >
+                  <Users size={16}/> Comptes
+               </button>
+               <button 
+                 onClick={() => setSettingsTab('logs')}
+                 className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${settingsTab === 'logs' ? 'bg-white dark:bg-gray-700 shadow text-[var(--role-color)]' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+               >
+                  <Activity size={16}/> Activité
+               </button>
+            </div>
+
+            {settingsTab === 'users' && (
+               <div className="flex gap-3 w-full md:w-auto">
+                  <div className="relative w-full md:w-64">
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                     <input 
+                        type="text" 
+                        placeholder="Rechercher un utilisateur..." 
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-[var(--role-color)] transition-shadow shadow-sm text-gray-900 dark:text-white placeholder-gray-400"
+                     />
+                  </div>
+                  <Button onClick={() => setShowUserForm(true)} className="w-auto px-4 rounded-xl shadow-lg bg-[var(--role-color)] hover:brightness-110 text-white flex items-center justify-center"><UserPlus size={20}/></Button>
+               </div>
+            )}
+         </div>
+
+         {/* USERS TAB */}
+         {settingsTab === 'users' && (
+           <div className="space-y-4">
+              {/* Add User Modal */}
+              {showUserForm && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
+                   <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl w-full max-w-lg shadow-2xl relative border border-white/10">
+                      <button onClick={() => setShowUserForm(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-gray-400"><X size={20}/></button>
+                      <h4 className="font-bold text-2xl mb-6 flex items-center gap-3 text-[var(--role-color)]">
+                         <div className="p-2 bg-[var(--role-color)]/10 rounded-lg"><UserPlus size={24}/></div>
+                         Nouveau Compte
+                      </h4>
+                      <div className="grid grid-cols-1 gap-5">
+                         <Input label="Identifiant (Username)" value={newUser.username || ''} onChange={e => setNewUser({...newUser, username: e.target.value})} className="bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white" />
+                         <Input label="Mot de passe initial" value={newUser.password || ''} onChange={e => setNewUser({...newUser, password: e.target.value})} className="bg-gray-50 dark:bg-black/20 text-gray-900 dark:text-white" />
+                         <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Rôle</label>
+                            <select className="w-full p-3.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--role-color)]" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as UserRole})}>
+                               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                         </div>
+                         <div>
+                            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Site Assigné</label>
+                            <select className="w-full p-3.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[var(--role-color)]" value={newUser.site || ''} onChange={e => setNewUser({...newUser, site: e.target.value})}>
+                               <option value="">Aucun (Global)</option>
+                               {SITE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                         </div>
+                      </div>
+                      <div className="mt-8 flex justify-end gap-3">
+                         <Button onClick={() => setShowUserForm(false)} variant="secondary" className="w-auto px-6">Annuler</Button>
+                         <Button onClick={handleAddUser} className="w-auto px-8 bg-[var(--role-color)] text-white hover:brightness-110 shadow-lg">Créer le compte</Button>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {/* Edit Password Modal */}
+              {editingUser && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                   <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl w-full max-w-md shadow-2xl animate-fade-in relative border border-white/10">
+                      <button onClick={() => setEditingUser(null)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full text-gray-500 dark:text-gray-400"><X size={20}/></button>
+                      <h3 className="font-bold text-xl mb-6 flex items-center gap-3 text-gray-900 dark:text-white"><div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><Key size={24}/></div> Changer Mot de Passe</h3>
+                      <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl mb-6">
+                         <p className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-1">Utilisateur Cible</p>
+                         <p className="text-lg font-bold text-gray-900 dark:text-white">{editingUser.username}</p>
+                         <p className="text-sm text-[var(--role-color)]">{editingUser.role}</p>
+                      </div>
+                      <Input label="Nouveau Mot de passe" value={newPassword} onChange={e => setNewPassword(e.target.value)} type="text" placeholder="Entrez le nouveau code" className="text-gray-900 dark:text-white" />
+                      <Button onClick={handleUpdatePassword} className="mt-6 w-full bg-amber-500 hover:bg-amber-600 text-white shadow-lg">Mettre à jour</Button>
+                   </div>
+                </div>
+              )}
+
+              {/* Mobile/Tablet View: Cards (Grid 1 on Mobile, Grid 2 on Tablet) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-4">
+                 {filteredUsers.map((u, idx) => (
+                    <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-4 transition-all hover:shadow-md">
+                       <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-4">
+                             <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white shadow-md ${u.role === UserRole.Boss ? 'bg-gradient-to-br from-red-500 to-red-700' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
+                                {u.username.charAt(0).toUpperCase()}
+                             </div>
+                             <div>
+                                <div className="font-bold text-lg text-gray-900 dark:text-white">{u.username}</div>
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${u.role === UserRole.Boss ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'}`}>{u.role}</span>
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 p-3 rounded-xl">
+                          <Home size={16}/> Site: <span className="font-medium text-gray-900 dark:text-white">{u.site || 'Global'}</span>
+                       </div>
+
+                       <div className="flex gap-2 pt-2 mt-auto">
+                          <button onClick={() => setEditingUser(u)} className="flex-1 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"><Key size={16}/> <span className="hidden sm:inline">Mdp</span></button>
+                          {u.role !== UserRole.Boss && (
+                             <button onClick={() => handleDeleteUser(u.username)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"><Trash2 size={16}/> <span className="hidden sm:inline">Suppr</span></button>
+                          )}
+                       </div>
+                    </div>
+                 ))}
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden lg:block dashboard-card p-0 overflow-hidden">
+                 <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 dark:bg-white/5">
+                       <tr>
+                          <th className="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Utilisateur</th>
+                          <th className="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Rôle</th>
+                          <th className="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Site</th>
+                          <th className="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400 text-right">Actions</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                       {filteredUsers.map((u, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                             <td className="px-6 py-4 font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs text-white font-bold ${u.role === UserRole.Boss ? 'bg-red-600' : 'bg-blue-600'}`}>
+                                   {u.username.charAt(0)}
+                                </div>
+                                {u.username}
+                             </td>
+                             <td className="px-6 py-4">
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.role === UserRole.Boss ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'}`}>{u.role}</span>
+                             </td>
+                             <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{u.site || 'Global'}</td>
+                             <td className="px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   <button onClick={() => setEditingUser(u)} className="p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg transition-colors" title="Changer mot de passe"><Key size={16}/></button>
+                                   {u.role !== UserRole.Boss && (
+                                      <button onClick={() => handleDeleteUser(u.username)} className="p-2 text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 rounded-lg transition-colors" title="Supprimer le compte"><Trash2 size={16}/></button>
+                                   )}
+                                </div>
+                             </td>
+                          </tr>
+                       ))}
+                    </tbody>
+                 </table>
+              </div>
+           </div>
+         )}
+
+         {/* LOGS TAB (Mobile Optimized Timeline) */}
+         {settingsTab === 'logs' && (
+            <div className="dashboard-card p-0 overflow-hidden relative">
+               <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-white/5 flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm font-bold"><History size={16}/> Dernières actions</span>
+                  <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">{actionLogs.length} entrées</span>
+               </div>
+               
+               <div className="max-h-[600px] overflow-y-auto p-0">
+                  {actionLogs.length === 0 ? (
+                     <div className="p-12 text-center flex flex-col items-center gap-4 text-gray-400">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center"><Activity size={24}/></div>
+                        <p>Aucune activité récente.</p>
+                     </div>
+                  ) : (
+                     <div className="relative">
+                        {/* Desktop Table */}
+                        <table className="hidden lg:table w-full text-sm text-left">
+                           <thead className="bg-white dark:bg-gray-900 sticky top-0 z-10 shadow-sm">
+                              <tr>
+                                 <th className="px-6 py-3 text-gray-500 dark:text-gray-400">Date</th>
+                                 <th className="px-6 py-3 text-gray-500 dark:text-gray-400">Acteur</th>
+                                 <th className="px-6 py-3 text-gray-500 dark:text-gray-400">Action</th>
+                                 <th className="px-6 py-3 text-gray-500 dark:text-gray-400">Détail</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                              {actionLogs.map((log) => (
+                                 <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                                    <td className="px-6 py-3 text-xs text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap">{log.date}</td>
+                                    <td className="px-6 py-3 font-bold flex items-center gap-2 text-gray-900 dark:text-white">
+                                       <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px]">{log.actor.charAt(0)}</div>
+                                       {log.actor}
+                                    </td>
+                                    <td className="px-6 py-3">
+                                       <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide ${
+                                          log.type === 'danger' ? 'bg-red-100 text-red-600' : 
+                                          log.type === 'warning' ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-blue-600'
+                                       }`}>
+                                          {log.action}
+                                       </span>
+                                    </td>
+                                    <td className="px-6 py-3 text-gray-600 dark:text-gray-300">{log.target}</td>
+                                 </tr>
+                              ))}
+                           </tbody>
+                        </table>
+
+                        {/* Mobile & Tablet Timeline View */}
+                        <div className="lg:hidden p-4 space-y-6 relative">
+                           {/* Vertical Line */}
+                           <div className="absolute left-7 top-6 bottom-6 w-0.5 bg-gray-200 dark:bg-gray-800"></div>
+                           
+                           {actionLogs.map((log) => (
+                              <div key={log.id} className="relative pl-10">
+                                 {/* Timeline Dot */}
+                                 <div className={`absolute left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 shadow-sm z-10 ${
+                                    log.type === 'danger' ? 'bg-red-500' : 
+                                    log.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                                 }`}></div>
+                                 
+                                 <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                                    <div className="flex justify-between items-start mb-1">
+                                       <span className={`text-[10px] uppercase font-bold tracking-wide ${
+                                          log.type === 'danger' ? 'text-red-600' : 
+                                          log.type === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                                       }`}>
+                                          {log.action}
+                                       </span>
+                                       <span className="text-[10px] text-gray-400">{log.date.split(' ')[1]}</span>
+                                    </div>
+                                    <div className="font-bold text-sm mb-1 text-gray-800 dark:text-gray-200">{log.target}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                       <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-[8px]">{log.actor.charAt(0)}</div>
+                                       Par: {log.actor}
+                                    </div>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                  )}
+               </div>
+            </div>
+         )}
+      </div>
+    );
   };
 
   const renderCaisse = () => (
@@ -486,7 +834,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
         )}
         
         <div className="space-y-4 flex-grow overflow-y-auto pr-2 custom-scrollbar">
-           {cashFunds.map(f => (
+           {cashFunds.length === 0 ? <p className="text-center text-gray-400 mt-10">Aucun fonds enregistré.</p> : cashFunds.map(f => (
              <div key={f.id} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-white/5 rounded-xl hover:bg-white hover:shadow-md dark:hover:bg-white/10 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-700">
                 <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center font-bold">
@@ -528,7 +876,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
         )}
 
         <div className="space-y-4 flex-grow overflow-y-auto pr-2 custom-scrollbar">
-           {cashExpenses.map(e => (
+           {cashExpenses.length === 0 ? <p className="text-center text-gray-400 mt-10">Aucune dépense enregistrée.</p> : cashExpenses.map(e => (
              <div key={e.id} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-white/5 rounded-xl hover:bg-white hover:shadow-md dark:hover:bg-white/10 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-700">
                 <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 flex items-center justify-center font-bold">
@@ -640,60 +988,70 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
 
             {/* Right: Items Grid */}
             <div className="flex-1">
-               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredItems.map((item, idx) => {
-                     const originalIndex = stockItems.indexOf(item);
-                     const isCritical = item.quantite <= item.seuilCritique;
-                     
-                     return (
-                      <div key={idx} className={`dashboard-card p-5 group transition-all duration-300 hover:-translate-y-1 ${isCritical ? 'border-l-4 border-l-rose-500' : 'hover:border-[var(--role-color)]'}`}>
-                         <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-center gap-4">
-                               <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${isCritical ? 'bg-rose-100 text-rose-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}>
-                                  <Package size={24} />
-                               </div>
-                               <div>
-                                  <h4 className="font-bold text-base leading-snug">{item.nom}</h4>
-                                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">{item.cat}</span>
-                               </div>
-                            </div>
-                            <div className="text-right">
-                               <div className="font-mono font-bold text-lg text-[var(--role-color)]">{item.prix} <span className="text-xs">DH</span></div>
-                            </div>
-                         </div>
+               {filteredItems.length === 0 ? (
+                 <div className="dashboard-card h-96 flex items-center justify-center flex-col opacity-50 border-dashed border-2 border-gray-300 dark:border-gray-700 bg-transparent shadow-none">
+                   <div className="p-6 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
+                      <Package size={48} className="text-gray-400" />
+                   </div>
+                   <p className="text-lg font-medium">Le stock est vide.</p>
+                   <p className="text-sm text-gray-400 mt-2">Commencez par ajouter des produits.</p>
+                 </div>
+               ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredItems.map((item, idx) => {
+                      const originalIndex = stockItems.indexOf(item);
+                      const isCritical = item.quantite <= item.seuilCritique;
+                      
+                      return (
+                        <div key={idx} className={`dashboard-card p-5 group transition-all duration-300 hover:-translate-y-1 ${isCritical ? 'border-l-4 border-l-rose-500' : 'hover:border-[var(--role-color)]'}`}>
+                          <div className="flex justify-between items-start mb-4">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${isCritical ? 'bg-rose-100 text-rose-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}>
+                                    <Package size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-base leading-snug">{item.nom}</h4>
+                                    <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">{item.cat}</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono font-bold text-lg text-[var(--role-color)]">{item.prix} <span className="text-xs">DH</span></div>
+                              </div>
+                          </div>
 
-                         <div className="bg-gray-50 dark:bg-black/20 rounded-xl p-4 flex justify-between items-center mb-2">
-                            <div className="flex flex-col">
-                               <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider mb-0.5">Stock Actuel</span>
-                               <span className={`font-mono text-2xl font-bold ${isCritical ? 'text-rose-500' : 'text-gray-800 dark:text-white'}`}>
-                                 {item.quantite} <span className="text-sm font-normal text-gray-400">{item.unite}</span>
-                               </span>
+                          <div className="bg-gray-50 dark:bg-black/20 rounded-xl p-4 flex justify-between items-center mb-2">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider mb-0.5">Stock Actuel</span>
+                                <span className={`font-mono text-2xl font-bold ${isCritical ? 'text-rose-500' : 'text-gray-800 dark:text-white'}`}>
+                                  {item.quantite} <span className="text-sm font-normal text-gray-400">{item.unite}</span>
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => handleStockUpdate(originalIndex, -1)}
+                                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors border border-gray-200 dark:border-gray-600"
+                                >
+                                  <Minus size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => handleStockUpdate(originalIndex, 1)}
+                                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--role-color)] text-white shadow-md hover:brightness-110 transition-transform active:scale-95"
+                                >
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                          </div>
+                          
+                          {isCritical && (
+                            <div className="flex items-center gap-2 text-rose-500 text-xs font-bold animate-pulse bg-rose-50 dark:bg-rose-900/10 p-2 rounded-lg justify-center">
+                                <AlertTriangle size={14} /> Stock Critique (Min: {item.seuilCritique})
                             </div>
-                            <div className="flex items-center gap-2">
-                               <button 
-                                 onClick={() => handleStockUpdate(originalIndex, -1)}
-                                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 shadow-sm hover:bg-rose-50 hover:text-rose-500 transition-colors border border-gray-200 dark:border-gray-600"
-                               >
-                                 <Minus size={16} />
-                               </button>
-                               <button 
-                                 onClick={() => handleStockUpdate(originalIndex, 1)}
-                                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-[var(--role-color)] text-white shadow-md hover:brightness-110 transition-transform active:scale-95"
-                               >
-                                 <Plus size={16} />
-                               </button>
-                            </div>
-                         </div>
-                         
-                         {isCritical && (
-                           <div className="flex items-center gap-2 text-rose-500 text-xs font-bold animate-pulse bg-rose-50 dark:bg-rose-900/10 p-2 rounded-lg justify-center">
-                              <AlertTriangle size={14} /> Stock Critique (Min: {item.seuilCritique})
-                           </div>
-                         )}
-                      </div>
-                     );
-                  })}
-               </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+               )}
             </div>
          </div>
       </div>
@@ -949,78 +1307,85 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
        <div className="flex justify-between items-center mb-8">
           <div>
             <h3 className="font-bold text-2xl">Blanchisserie</h3>
-            <p className="text-sm text-gray-400">Suivi du linge et nettoyage</p>
+            <p className="text-sm text-gray-400">Suivi du linge client</p>
           </div>
-          <Button onClick={() => setShowLaundryForm(true)} className="w-auto px-6 py-3 rounded-lg shadow-md"><Plus size={18} className="mr-2"/> Nouvelle Commande</Button>
+          <Button onClick={() => setShowLaundryForm(true)} className="w-auto px-6 py-3 shadow-md"><Shirt size={18} className="mr-2"/> Nouvelle demande</Button>
        </div>
 
        {showLaundryForm && (
          <div className="dashboard-card mb-8 p-6 border-2 border-[var(--role-color)]/20 relative">
-            <button onClick={() => setShowLaundryForm(false)} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20}/></button>
-            <h4 className="font-bold text-lg mb-6 flex items-center gap-2 text-[var(--role-color)]"><Shirt size={20}/> Nouvelle demande</h4>
+            <button onClick={() => setShowLaundryForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><X size={20}/></button>
+            <h4 className="font-bold text-lg mb-6 flex items-center gap-2 text-[var(--role-color)]"><Shirt size={20}/> Nouvelle demande de blanchisserie</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="space-y-2">
-                 <label className="text-sm font-medium">Appartement Concerné</label>
-                 <select 
-                   className="w-full p-3.5 border border-gray-300 rounded-lg dark:bg-gray-800"
-                   value={newLaundryOrder.apartmentId}
-                   onChange={e => {
-                      const aptId = e.target.value;
-                      const apt = apartments.find(a => a.id === aptId);
-                      const clientId = apt?.currentClients[0]?.id || '';
-                      setNewLaundryOrder({...newLaundryOrder, apartmentId: aptId, clientId});
-                   }}
-                 >
-                   <option value="">Sélectionner...</option>
-                   {apartments.filter(a => a.currentClients.length > 0).map(a => (
-                      <option key={a.id} value={a.id}>{a.number} - {a.currentClients[0].name}</option>
-                   ))}
-                 </select>
+               <div>
+                  <label className="block text-sm font-medium mb-2">Appartement</label>
+                  <select 
+                    className="w-full p-3.5 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-[var(--role-color)]"
+                    value={newLaundryOrder.apartmentId}
+                    onChange={e => setNewLaundryOrder({...newLaundryOrder, apartmentId: e.target.value, clientId: ''})}
+                  >
+                     <option value="">Choisir un appartement...</option>
+                     {apartments.filter(a => a.currentClients.length > 0).map(a => (
+                        <option key={a.id} value={a.id}>{a.number} - {a.building}</option>
+                     ))}
+                  </select>
                </div>
-               <Input label="Articles (ex: 2 Draps, 1 Serviette)" value={newLaundryOrder.items} onChange={e => setNewLaundryOrder({...newLaundryOrder, items: e.target.value})} className="bg-white" />
+               <div>
+                  <label className="block text-sm font-medium mb-2">Client</label>
+                  <select 
+                    className="w-full p-3.5 border border-gray-300 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-[var(--role-color)]"
+                    value={newLaundryOrder.clientId}
+                    onChange={e => setNewLaundryOrder({...newLaundryOrder, clientId: e.target.value})}
+                    disabled={!newLaundryOrder.apartmentId}
+                  >
+                     <option value="">Choisir un client...</option>
+                     {newLaundryOrder.apartmentId && apartments.find(a => a.id === newLaundryOrder.apartmentId)?.currentClients.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                     ))}
+                  </select>
+               </div>
+               <div className="md:col-span-2">
+                  <Input label="Articles (Détails)" placeholder="Ex: 2 Chemises, 1 Pantalon..." value={newLaundryOrder.items} onChange={e => setNewLaundryOrder({...newLaundryOrder, items: e.target.value})} className="bg-white" />
+               </div>
             </div>
             <div className="flex gap-3 mt-6 justify-end">
-                 <Button onClick={() => setShowLaundryForm(false)} variant="secondary" className="w-auto px-6">Annuler</Button>
-                 <Button onClick={handleAddLaundryOrder} className="w-auto px-6">Envoyer la demande</Button>
+               <Button onClick={() => setShowLaundryForm(false)} variant="secondary" className="w-auto px-6">Annuler</Button>
+               <Button onClick={handleAddLaundryOrder} className="w-auto px-6">Enregistrer</Button>
             </div>
          </div>
        )}
 
        <div className="grid gap-4">
-          {laundryOrders.map(order => (
-            <div key={order.id} className="dashboard-card p-4 flex flex-col md:flex-row justify-between items-center gap-4 hover:shadow-md transition-all">
-               <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
-                     <Shirt size={24} />
-                  </div>
-                  <div>
-                     <div className="font-bold text-lg">{order.apartmentNumber} <span className="text-sm font-normal text-gray-500">| {order.clientName}</span></div>
-                     <div className="text-sm font-medium mt-1">{order.items}</div>
-                  </div>
-               </div>
-               
-               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                  <div className="text-right mr-4">
-                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        order.status === 'Livré' ? 'bg-emerald-100 text-emerald-700' : 
-                        order.status === 'En blanchisserie' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                     }`}>
-                        {order.status}
-                     </span>
-                     <div className="text-[10px] text-gray-400 mt-1">{order.date}</div>
-                  </div>
-
-                  {order.status !== 'Livré' && (
-                    <button 
-                      onClick={() => updateLaundryStatus(order.id, order.status === 'En attente' ? 'En blanchisserie' : 'Livré')}
-                      className="p-3 bg-gray-100 hover:bg-[var(--role-color)] hover:text-white rounded-full transition-colors shadow-sm"
-                      title="Avancer l'étape"
-                    >
-                      <ArrowRight size={18} />
-                    </button>
-                  )}
-               </div>
-            </div>
+          {laundryOrders.length === 0 ? <p className="text-center text-gray-400 py-10">Aucune commande de blanchisserie.</p> : laundryOrders.map(order => (
+             <div key={order.id} className="dashboard-card p-5 flex flex-col md:flex-row justify-between items-center gap-6 hover:shadow-lg transition-all border-l-4 border-l-transparent hover:border-l-[var(--role-color)]">
+                <div className="flex items-center gap-5 w-full md:w-auto">
+                   <div className="w-14 h-14 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-xl shadow-inner">
+                      <Shirt size={24} />
+                   </div>
+                   <div>
+                      <div className="font-bold text-lg mb-1">{order.apartmentNumber} <span className="text-gray-400 mx-2">|</span> {order.clientName}</div>
+                      <div className="text-sm text-gray-500 font-medium mb-1">{order.items}</div>
+                      <div className="text-xs text-gray-400 flex items-center gap-1"><Calendar size={12}/> {order.date}</div>
+                   </div>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                   {['En attente', 'En blanchisserie', 'En réception', 'Livré'].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => updateLaundryStatus(order.id, status as LaundryStatus)}
+                        className={`
+                          px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border
+                          ${order.status === status 
+                            ? 'bg-[var(--role-color)] text-white border-[var(--role-color)] shadow-md' 
+                            : 'bg-transparent text-gray-400 border-gray-200 dark:border-gray-700 hover:border-gray-400'}
+                        `}
+                      >
+                         {status}
+                      </button>
+                   ))}
+                </div>
+             </div>
           ))}
        </div>
     </div>
@@ -1081,7 +1446,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
        </div>
 
        <div className="grid gap-4">
-          {restaurantOrders.map(order => (
+          {restaurantOrders.length === 0 ? <p className="text-center text-gray-400 py-10">Aucun bon de commande.</p> : restaurantOrders.map(order => (
             <div key={order.id} className="dashboard-card p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer group transition-all" onClick={() => setShowBonModal(order)}>
                <div className="flex items-center gap-5">
                   <div className="p-4 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
@@ -1194,7 +1559,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
        )}
 
        <div className="grid gap-4">
-          {employees.map(emp => (
+          {employees.length === 0 ? <p className="text-center text-gray-400 py-10">Aucun employé enregistré.</p> : employees.map(emp => (
              <div key={emp.id} className="dashboard-card p-5 flex flex-col md:flex-row justify-between items-center gap-6 hover:shadow-lg transition-all group border-l-4 border-l-transparent hover:border-l-[var(--role-color)]">
                 <div className="flex items-center gap-5 w-full md:w-auto">
                    <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center font-bold text-xl text-gray-500 shadow-inner">
@@ -1333,6 +1698,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
          activeMenu === 'Bons de restauration' ? renderRestaurant() :
          activeMenu === 'Les employés' || activeMenu === 'Présence' ? renderEmployees() :
          activeMenu === 'Rapports' ? renderReports() :
+         activeMenu === 'Paramètres' ? renderSettings() :
          (
            <div className="dashboard-card h-96 flex items-center justify-center flex-col opacity-50 border-dashed border-2 border-gray-300 dark:border-gray-700 bg-transparent shadow-none">
               <div className="p-6 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
@@ -1348,7 +1714,6 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
   );
 };
 
-// ... [LoginPage and App Export KEPT EXACTLY AS IS to preserve functionality] ...
 const LoginPage: React.FC<{ onLogin: (u: User) => void }> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -1453,15 +1818,8 @@ const LoginPage: React.FC<{ onLogin: (u: User) => void }> = ({ onLogin }) => {
 };
 
 const App: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const currentUser = AuthService.getPersistedUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-  }, []);
+  const [user, setUser] = useState<User | null>(() => AuthService.getPersistedUser());
+  const [loading, setLoading] = useState(true);
 
   const handleLogin = (u: User) => {
     setUser(u);
@@ -1473,14 +1831,14 @@ const App: React.FC = () => {
     AuthService.logout();
   };
 
-  if (isLoading) {
-    return <LoadingScreen onFinished={() => setIsLoading(false)} />;
+  if (loading) {
+    return <LoadingScreen onFinished={() => setLoading(false)} />;
   }
 
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={!user ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" replace />} />
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="/*" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
       </Routes>
     </HashRouter>
