@@ -49,27 +49,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
 
   return (
     <>
-      {/* Mobile Overlay with Blur */}
+      {/* Overlay with Blur (Visible on Mobile & Tablet) */}
       <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 md:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
 
       <aside 
         className={`
-          fixed md:fixed left-0 top-0 bottom-0 w-[270px] 
+          fixed lg:fixed left-0 top-0 bottom-0 w-[270px] 
           flex flex-col
           bg-[var(--role-color)]
           transition-transform duration-300 ease-in-out z-50
-          shadow-2xl md:shadow-none
+          shadow-2xl lg:shadow-none
           border-r border-white/5
-          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Sidebar Background Pattern */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60 pointer-events-none z-0"></div>
         
-        {/* Header Section (Mobile Close) */}
+        {/* Header Section (Mobile/Tablet Close) */}
         <div className="relative z-10 flex items-center justify-between p-6 md:pt-8">
            <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-white p-0.5 shadow-xl border-2 border-white/20 flex-shrink-0">
@@ -82,9 +82,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
            </div>
            <button 
              onClick={onClose} 
-             className="text-white/70 hover:text-white md:hidden p-1 hover:bg-white/10 rounded-full transition-colors"
+             className="text-white/70 hover:text-white lg:hidden p-1 hover:bg-white/10 rounded-full transition-colors"
            >
-             <X size={20} />
+             <X size={24} />
            </button>
         </div>
 
@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeItem, onItemClick,
               </div>
               <div className="flex flex-col">
                  <span className="text-white text-xs font-bold">Résidence Samia</span>
-                 <span className="text-white/40 text-[10px]">v2.4.0 (Pro)</span>
+                 <span className="text-white/40 text-[10px]">v2.5.0 (Pro)</span>
               </div>
            </div>
         </div>

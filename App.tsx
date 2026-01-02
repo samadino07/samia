@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, UserRole, ActionLog, SiteOption } from './types';
+import { User, UserRole, ActionLog, SiteOption, Dish, DailyPlan, MealType, Apartment, HebergementType, Client, ClientHistory, LaundryOrder, LaundryStatus, RestaurantOrder, Employee, CashFund, CashExpense } from './types';
 import { AuthService } from './services/authService';
 import { ROLES, MOCK_USERS, LOGO_URL, SITE_OPTIONS } from './constants';
 import { Input } from './components/Input';
@@ -19,8 +20,31 @@ import {
   Utensils, FileText, Printer, Briefcase, UserCheck, UserX, FileSpreadsheet, Download, PieChart as PieChartIcon,
   Wallet, Banknote, CreditCard, UserPlus, LogOut, ArrowRight, Loader2, Home, Lock, User as UserProfileIcon,
   FolderOpen, Tag, Coins, Layers, ChevronDown, MoreHorizontal, ChefHat, Truck, Shield, Key, Trash2, History, Save,
-  Filter, Activity
+  Filter, Activity, BarChart3
 } from 'lucide-react';
+
+// --- Helpers ---
+const generateApartments = (): Apartment[] => {
+  const apts: Apartment[] = [];
+  const sites = ['Fnidaq', "M'dik", 'Al Hoceima'];
+  for (let i = 0; i < 30; i++) {
+    apts.push({
+      id: i.toString(),
+      number: `A${100 + i}`,
+      building: i % 2 === 0 ? 'Bloc A' : 'Bloc B',
+      site: sites[i % 3],
+      currentClients: [],
+      history: []
+    });
+  }
+  return apts;
+};
+
+const getMaxOccupants = (type: HebergementType): number => {
+  if (type === '1/4') return 1;
+  if (type === '1/2') return 2;
+  return 4; // Complet
+};
 
 // --- Loading Screen Component ---
 const LoadingScreen = ({ onFinished }: { onFinished: () => void }) => {
@@ -61,8 +85,8 @@ const StatWidget = ({ title, value, subtext, icon: Icon, trend }: any) => (
   <div className="dashboard-card group relative hover:-translate-y-1 transition-transform duration-300">
     <div className="flex justify-between items-start">
       <div className="relative z-10">
-        <div className="dashboard-stat-label mb-1">{title}</div>
-        <div className="dashboard-stat-value tracking-tight">{value}</div>
+        <div className="dashboard-stat-label mb-1 text-gray-500 dark:text-gray-400">{title}</div>
+        <div className="dashboard-stat-value tracking-tight text-gray-900 dark:text-white">{value}</div>
       </div>
       <div className={`
         p-3 rounded-2xl shadow-sm transition-colors duration-300
@@ -82,220 +106,86 @@ const StatWidget = ({ title, value, subtext, icon: Icon, trend }: any) => (
   </div>
 );
 
-const InteractiveStockWidget = ({ items, onUpdate }: any) => {
-  return (
-    <div className="dashboard-card col-span-1 lg:col-span-2">
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border-color)]">
-        <h3 className="font-bold text-lg flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--role-color)] text-white shadow-sm">
-             <Package size={18} />
-          </div>
-          Gestion Rapide Stock
-        </h3>
-        <button className="text-xs font-bold text-[var(--role-color)] hover:bg-[var(--role-color)] hover:text-white px-3 py-1.5 rounded-full transition-all uppercase tracking-wide">
-          Voir tout
-        </button>
-      </div>
-      <div className="space-y-3">
-        {items.length === 0 ? (
-          <div className="text-center py-6 text-gray-400 text-sm">Aucun article en stock</div>
-        ) : (
-          items.slice(0, 5).map((item: any, idx: number) => (
-            <div key={idx} className="group flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-[var(--border-color)]">
-              <div className="flex items-center gap-4">
-                <div className={`w-2 h-2 rounded-full ring-4 ring-opacity-20 ${item.quantite <= item.seuilCritique ? 'bg-rose-500 ring-rose-500' : 'bg-emerald-500 ring-emerald-500'}`}></div>
-                <div>
-                    <div className="font-semibold text-sm">{item.nom}</div>
-                    <div className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">{item.cat}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 bg-gray-50 dark:bg-[#1f2937] rounded-lg p-1 border border-[var(--border-color)]">
-                <button 
-                  onClick={() => onUpdate(idx, -1)}
-                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-rose-500 hover:shadow-sm transition-all"
-                >
-                  <Minus size={14} />
-                </button>
-                <span className="font-mono font-bold w-10 text-center text-sm">{item.quantite}</span>
-                <button 
-                  onClick={() => onUpdate(idx, 1)}
-                  className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-white dark:hover:bg-gray-700 text-gray-500 hover:text-emerald-500 hover:shadow-sm transition-all"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+const RevenueChartWidget = ({ data }: { data: any[] }) => (
+  <div className="dashboard-card col-span-1 lg:col-span-2 p-6">
+    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Revenus Hebdomadaires</h3>
+    <div className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="colorRevenu" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+          <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}DH`} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333333" opacity={0.1} />
+          <RechartsTooltip contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }} />
+          <Area type="monotone" dataKey="revenu" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenu)" />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
-  );
-};
-
-const InteractiveOrdersWidget = ({ orders, onStatusChange }: any) => {
-  const getStatusColor = (s: string) => {
-    switch(s) {
-      case 'Livré': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
-      case 'En cours': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
-      default: return 'bg-slate-100 text-slate-700 dark:bg-slate-700/30 dark:text-slate-400 border-slate-200 dark:border-slate-700';
-    }
-  };
-
-  return (
-    <div className="dashboard-card col-span-1 lg:col-span-2">
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border-color)]">
-        <h3 className="font-bold text-lg flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--role-color)] text-white shadow-sm">
-             <ChefHat size={18} />
-          </div>
-          Commandes Cuisine
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr>
-              <th className="rounded-l-lg pl-4">Produit</th>
-              <th>Qté</th>
-              <th className="rounded-r-lg pr-4">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="space-y-2">
-            {orders.length === 0 ? (
-               <tr><td colSpan={3} className="text-center py-4 text-gray-400">Aucune commande en cours</td></tr>
-            ) : (
-              orders.map((order: any, idx: number) => (
-                <tr key={idx} className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                  <td className="font-medium pl-4">{order.produit}</td>
-                  <td className="font-mono text-gray-500">{order.quantite}</td>
-                  <td className="pr-4">
-                    <button 
-                      onClick={() => onStatusChange(idx)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all hover:scale-105 active:scale-95 ${getStatusColor(order.statut)}`}
-                    >
-                      {order.statut}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-const RevenueChartWidget = ({ data }: any) => (
-  <div className="dashboard-card col-span-1 lg:col-span-3 h-[340px]">
-    <div className="flex justify-between items-center mb-6">
-       <h3 className="font-bold text-lg text-[var(--text-main)]">Aperçu des Revenus</h3>
-       <select className="text-xs bg-gray-100 dark:bg-gray-800 border-none rounded-lg px-2 py-1 cursor-pointer outline-none">
-          <option>Cette semaine</option>
-          <option>Ce mois</option>
-       </select>
-    </div>
-    <ResponsiveContainer width="100%" height="85%">
-      <AreaChart data={data}>
-        <defs>
-          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--role-color)" stopOpacity={0.3}/>
-            <stop offset="95%" stopColor="var(--role-color)" stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.5} />
-        <XAxis dataKey="name" tick={{fill: '#94a3b8', fontSize: 11}} axisLine={false} tickLine={false} dy={10} />
-        <YAxis tick={{fill: '#94a3b8', fontSize: 11}} axisLine={false} tickLine={false} tickFormatter={(value) => `${value} DH`} />
-        <RechartsTooltip 
-          contentStyle={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-main)', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-          itemStyle={{ color: 'var(--text-main)', fontWeight: 600 }}
-          cursor={{stroke: 'var(--role-color)', strokeWidth: 1, strokeDasharray: '4 4'}}
-        />
-        <Area type="monotone" dataKey="revenu" stroke="var(--role-color)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-      </AreaChart>
-    </ResponsiveContainer>
   </div>
 );
 
-const OccupancyChartWidget = () => {
-  const data = [
-    { name: 'Occupés', value: 0, color: '#3b82f6' },
-    { name: 'Libres', value: 100, color: '#10b981' },
-    { name: 'Maintenance', value: 0, color: '#f43f5e' },
-  ];
-
-  return (
-    <div className="dashboard-card col-span-1 lg:col-span-1 h-[340px] flex flex-col">
-      <h3 className="font-bold text-lg mb-4 w-full text-left">Occupation Actuelle</h3>
-      <div className="flex-grow relative">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={90}
-              paddingAngle={4}
-              dataKey="value"
-              stroke="none"
-              cornerRadius={6}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
+const OccupancyChartWidget = () => (
+  <div className="dashboard-card p-6">
+    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">Occupation par Site</h3>
+    <div className="h-64 flex items-center justify-center">
+       <ResponsiveContainer width="100%" height="100%">
+         <PieChart>
+            <Pie data={[{name: 'Fnidaq', value: 30}, {name: "M'dik", value: 50}, {name: 'Al Hoceima', value: 20}]} dataKey="value" cx="50%" cy="50%" innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5}>
+              <Cell fill="#0088FE" />
+              <Cell fill="#00C49F" />
+              <Cell fill="#FFBB28" />
             </Pie>
-            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px rgba(0,0,0,0.1)', backgroundColor: 'rgba(255,255,255,0.9)' }} />
-          </PieChart>
-        </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-           <span className="text-3xl font-bold tracking-tight">0%</span>
-           <span className="text-[10px] uppercase text-gray-400 font-semibold tracking-widest mt-1">Taux Global</span>
-        </div>
-      </div>
-      <div className="mt-4 space-y-2 px-2">
-        {data.map(d => (
-          <div key={d.name} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-               <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: d.color}}></div>
-               <span className="text-gray-500 font-medium">{d.name}</span>
-            </div>
-            <span className="font-bold">{d.value}</span>
-          </div>
-        ))}
-      </div>
+            <RechartsTooltip contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }} />
+            <Legend verticalAlign="bottom" height={36}/>
+         </PieChart>
+       </ResponsiveContainer>
     </div>
-  );
-};
+  </div>
+);
 
-// ... [Types & Interfaces] ...
-type MealType = 'PtDej' | 'Dej' | 'Gouter' | 'Diner';
-type HebergementType = '1/1' | '1/2' | '1/3' | '1/4';
+const InteractiveStockWidget = ({ items, onUpdate }: any) => (
+  <div className="dashboard-card col-span-1 lg:col-span-2 p-6">
+    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2"><AlertTriangle className="text-amber-500" size={20}/> Stock Critique</h3>
+    <div className="space-y-3">
+       {items.slice(0, 3).map((item: any, idx: number) => (
+         <div key={idx} className="flex justify-between items-center bg-gray-50 dark:bg-white/5 p-3 rounded-lg border border-gray-100 dark:border-white/10">
+           <span className="font-medium text-gray-800 dark:text-gray-200">{item.nom}</span>
+           <div className="flex items-center gap-2">
+             <button onClick={() => onUpdate(idx, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-700 rounded shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"><Minus size={14}/></button>
+             <span className="font-mono w-8 text-center font-bold">{item.quantite}</span>
+             <button onClick={() => onUpdate(idx, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-700 rounded shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"><Plus size={14}/></button>
+           </div>
+         </div>
+       ))}
+       {items.length === 0 && <div className="text-gray-400 text-sm py-4 text-center">Tous les niveaux de stock sont optimaux.</div>}
+    </div>
+  </div>
+);
 
-interface Dish { id: string; name: string; category: MealType; ingredients: string; cost: number; }
-interface DailyPlan { PtDej?: string; Dej?: string; Gouter?: string; Diner?: string; }
-interface Client { id: string; name: string; entryDate: string; type: HebergementType; }
-interface ClientHistory { clientName: string; entryDate: string; leaveDate: string; type: HebergementType; }
-interface Apartment { id: string; number: string; building: string; site: string; capacity: number; currentClients: Client[]; history: ClientHistory[]; }
-type LaundryStatus = 'En attente' | 'En blanchisserie' | 'En réception' | 'Livré';
-interface LaundryOrder { id: string; clientId: string; clientName: string; apartmentNumber: string; site: string; items: string; date: string; status: LaundryStatus; }
-interface RestaurantOrder { id: string; type: 'Repas' | 'Boisson'; mealType?: MealType; clientId: string; clientName: string; aptNumber: string; site: string; date: string; time: string; items: string[]; }
-interface Employee { id: string; name: string; function: string; phone: string; shift: 'Matin' | 'Soir' | 'Jour'; monthlySalary: number; lastMonthSalary: number; absences: number; status: 'Présent' | 'Absent' | 'Retard'; }
-interface CashFund { id: string; amount: number; date: string; addedBy: string; }
-interface CashExpense { id: string; category: string; amount: number; date: string; observation: string; addedBy: string; }
-
-const getMaxOccupants = (type: HebergementType): number => {
-  switch (type) { case '1/4': return 4; case '1/3': return 3; case '1/2': return 2; case '1/1': return 1; default: return 1; }
-};
-
-const generateApartments = (): Apartment[] => {
-  const apts: Apartment[] = [];
-  for(let i=1; i<=31; i++) apts.push({ id: `F-F-${i}`, number: `N°${i}`, building: 'Imm. Fnidaq', site: 'Fnidaq', capacity: 4, currentClients: [], history: [] });
-  for(let i=1; i<=16; i++) apts.push({ id: `F-B-${i}`, number: `B-${i}`, building: 'Imm. Bouzaghlal', site: 'Fnidaq', capacity: i <= 12 ? 4 : 2, currentClients: [], history: [] });
-  for(let i=1; i<=12; i++) apts.push({ id: `M-${i}`, number: `M-${i}`, building: 'Résidence M\'dik', site: "M'dik", capacity: i <= 11 ? 4 : 2, currentClients: [], history: [] });
-  for(let i=1; i<=8; i++) apts.push({ id: `A-${i}`, number: `AH-${i}`, building: 'Résidence Al Hoceima', site: 'Al Hoceima', capacity: 4, currentClients: [], history: [] });
-  return apts;
-};
+const InteractiveOrdersWidget = ({ orders, onStatusChange }: any) => (
+  <div className="dashboard-card p-6">
+    <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2"><ShoppingCart className="text-blue-500" size={20}/> Dernières Commandes</h3>
+    <div className="space-y-3">
+      {orders.slice(0, 3).map((order: any, idx: number) => (
+        <div key={idx} className="flex justify-between items-center text-sm border-b border-gray-100 dark:border-white/10 pb-2 last:border-0">
+           <div>
+             <div className="font-bold text-gray-800 dark:text-gray-200">{order.produit}</div>
+             <div className="text-xs text-gray-500">{order.date}</div>
+           </div>
+           <button onClick={() => onStatusChange(idx)} className={`px-2 py-1 rounded text-xs font-bold ${order.statut === 'Livré' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+             {order.statut}
+           </button>
+        </div>
+      ))}
+      {orders.length === 0 && <div className="text-gray-400 text-sm py-4 text-center">Aucune commande récente.</div>}
+    </div>
+  </div>
+);
 
 // --- Dashboard Component ---
 const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user, onLogout }) => {
@@ -304,7 +194,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tout');
 
-  // --- SETTINGS STATE (Initialized from LocalStorage via AuthService) ---
+  // --- SETTINGS STATE ---
   const [allUsers, setAllUsers] = useState<User[]>(() => AuthService.getUsers());
   const [actionLogs, setActionLogs] = useState<ActionLog[]>(() => {
     const saved = localStorage.getItem('rs_manager_logs');
@@ -481,6 +371,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     }
   }, [user]);
 
+  // FIX: Added missing handleThemeToggle definition
   const handleThemeToggle = (isDark: boolean) => {
     if (isDark) {
       document.body.classList.remove('theme-light');
@@ -653,8 +544,8 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                 </div>
               )}
 
-              {/* Mobile/Tablet View: Cards (Grid 1 on Mobile, Grid 2 on Tablet) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-4">
+              {/* Mobile Only: Cards (Phone < 768px) */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
                  {filteredUsers.map((u, idx) => (
                     <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col gap-4 transition-all hover:shadow-md">
                        <div className="flex justify-between items-start">
@@ -674,18 +565,18 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                        </div>
 
                        <div className="flex gap-2 pt-2 mt-auto">
-                          <button onClick={() => setEditingUser(u)} className="flex-1 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"><Key size={16}/> <span className="hidden sm:inline">Mdp</span></button>
+                          <button onClick={() => setEditingUser(u)} className="flex-1 py-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"><Key size={16}/> Mdp</button>
                           {u.role !== UserRole.Boss && (
-                             <button onClick={() => handleDeleteUser(u.username)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"><Trash2 size={16}/> <span className="hidden sm:inline">Suppr</span></button>
+                             <button onClick={() => handleDeleteUser(u.username)} className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"><Trash2 size={16}/> Supprimer</button>
                           )}
                        </div>
                     </div>
                  ))}
               </div>
 
-              {/* Desktop View: Table */}
-              <div className="hidden lg:block dashboard-card p-0 overflow-hidden">
-                 <table className="w-full text-left text-sm">
+              {/* Tablet & Desktop View: Table (>= 768px) */}
+              <div className="hidden md:block dashboard-card p-0 overflow-hidden overflow-x-auto">
+                 <table className="w-full text-left text-sm min-w-[600px]">
                     <thead className="bg-gray-50 dark:bg-white/5">
                        <tr>
                           <th className="px-6 py-4 font-bold text-xs uppercase text-gray-500 dark:text-gray-400">Utilisateur</th>
@@ -708,10 +599,24 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                              </td>
                              <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{u.site || 'Global'}</td>
                              <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                   <button onClick={() => setEditingUser(u)} className="p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg transition-colors" title="Changer mot de passe"><Key size={16}/></button>
+                                <div className="flex items-center justify-end gap-3">
+                                   <button 
+                                     onClick={() => setEditingUser(u)} 
+                                     className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg transition-colors font-medium text-xs uppercase tracking-wide" 
+                                     title="Changer mot de passe"
+                                   >
+                                      <Key size={14}/>
+                                      <span>Modifier</span>
+                                   </button>
                                    {u.role !== UserRole.Boss && (
-                                      <button onClick={() => handleDeleteUser(u.username)} className="p-2 text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 rounded-lg transition-colors" title="Supprimer le compte"><Trash2 size={16}/></button>
+                                      <button 
+                                        onClick={() => handleDeleteUser(u.username)} 
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-lg transition-colors font-medium text-xs uppercase tracking-wide" 
+                                        title="Supprimer le compte"
+                                      >
+                                         <Trash2 size={14}/>
+                                         <span>Supprimer</span>
+                                      </button>
                                    )}
                                 </div>
                              </td>
@@ -816,7 +721,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fade-in">
       <div className="dashboard-card h-full flex flex-col">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border-color)]">
-          <h3 className="font-bold text-lg flex items-center gap-2">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
              <div className="bg-emerald-100 text-emerald-600 p-2 rounded-lg dark:bg-emerald-900/30"><Wallet size={20} /></div>
              Fonds de Caisse
           </h3>
@@ -856,7 +761,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
 
       <div className="dashboard-card h-full flex flex-col">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border-color)]">
-          <h3 className="font-bold text-lg flex items-center gap-2">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
              <div className="bg-rose-100 text-rose-600 p-2 rounded-lg dark:bg-rose-900/30"><Banknote size={20} /></div>
              Dépenses
           </h3>
@@ -898,13 +803,8 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     </div>
   );
 
-  const renderStockManagement = () => {
-    const categories = ['Tout', ...Array.from(new Set(stockItems.map(item => item.cat)))];
-    const filteredItems = selectedCategory === 'Tout' ? stockItems : stockItems.filter(item => item.cat === selectedCategory);
-    const stockValue = filteredItems.reduce((acc, item) => acc + (item.quantite * item.prix), 0);
-
-    return (
-      <div className="animate-fade-in flex flex-col h-full">
+  const renderStockManagement = () => (
+    <div className="animate-fade-in flex flex-col h-full">
          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
             <div>
                <h3 className="text-2xl font-bold flex items-center gap-3 text-[var(--text-main)]">
@@ -916,7 +816,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
             <div className="flex items-center gap-4 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-[var(--border-color)]">
                <div className="px-4 border-r border-gray-200 dark:border-gray-700">
                   <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block mb-0.5">Valeur Totale</span>
-                  <span className="font-mono font-bold text-lg text-[var(--role-color)]">{stockValue.toLocaleString()} DH</span>
+                  <span className="font-mono font-bold text-lg text-[var(--role-color)]">{stockItems.reduce((acc, item) => acc + (item.quantite * item.prix), 0).toLocaleString()} DH</span>
                </div>
                <Button onClick={() => setShowAddForm(true)} className="w-auto py-2.5 px-5 text-xs font-bold uppercase tracking-wide rounded-lg shadow-none hover:shadow-md"><Plus size={16} className="mr-2"/> Produit</Button>
             </div>
@@ -938,7 +838,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                        placeholder="Choisir ou créer..."
                      />
                      <datalist id="categories-list">
-                        {categories.filter(c => c !== 'Tout').map(c => <option key={c} value={c} />)}
+                        {['Tout', ...Array.from(new Set(stockItems.map(item => item.cat)))].filter(c => c !== 'Tout').map(c => <option key={c} value={c} />)}
                      </datalist>
                   </div>
                   <Input label="Prix Unitaire (DH)" type="number" placeholder="0.00" value={newProduct.prix} onChange={e => setNewProduct({...newProduct, prix: Number(e.target.value)})} />
@@ -962,7 +862,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                     </h4>
                   </div>
                   <div className="p-2 flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-visible custom-scrollbar">
-                     {categories.map(cat => (
+                     {['Tout', ...Array.from(new Set(stockItems.map(item => item.cat)))].map(cat => (
                         <button
                           key={cat}
                           onClick={() => setSelectedCategory(cat)}
@@ -988,7 +888,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
 
             {/* Right: Items Grid */}
             <div className="flex-1">
-               {filteredItems.length === 0 ? (
+               {(selectedCategory === 'Tout' ? stockItems : stockItems.filter(item => item.cat === selectedCategory)).length === 0 ? (
                  <div className="dashboard-card h-96 flex items-center justify-center flex-col opacity-50 border-dashed border-2 border-gray-300 dark:border-gray-700 bg-transparent shadow-none">
                    <div className="p-6 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
                       <Package size={48} className="text-gray-400" />
@@ -998,7 +898,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                  </div>
                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredItems.map((item, idx) => {
+                    {(selectedCategory === 'Tout' ? stockItems : stockItems.filter(item => item.cat === selectedCategory)).map((item, idx) => {
                       const originalIndex = stockItems.indexOf(item);
                       const isCritical = item.quantite <= item.seuilCritique;
                       
@@ -1010,7 +910,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                                     <Package size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-base leading-snug">{item.nom}</h4>
+                                    <h4 className="font-bold text-base leading-snug text-gray-900 dark:text-white">{item.nom}</h4>
                                     <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">{item.cat}</span>
                                 </div>
                               </div>
@@ -1055,8 +955,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
             </div>
          </div>
       </div>
-    );
-  };
+  );
 
   const renderMealPlanning = () => (
     <div className="animate-fade-in space-y-8">
@@ -1228,7 +1127,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                     <div className={`absolute top-4 right-4 w-3 h-3 rounded-full ${isOccupied ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'}`}></div>
 
                     <div className="mb-4">
-                       <span className="font-mono text-2xl font-bold tracking-tighter opacity-80">{apt.number}</span>
+                       <span className="font-mono text-2xl font-bold tracking-tighter opacity-80 text-gray-900 dark:text-white">{apt.number}</span>
                        <div className="text-[10px] uppercase tracking-wider text-gray-400 mt-1 truncate">{apt.building}</div>
                     </div>
 
@@ -1627,199 +1526,160 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
            <RevenueChartWidget data={revenueData} />
            <div className="dashboard-card h-[340px] flex flex-col items-center justify-center border-dashed border-2 border-gray-300 dark:border-gray-700 bg-transparent">
               <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
-                 <BarChart size={32} className="text-gray-400" />
+                 <BarChart3 size={32} className="text-gray-400" />
               </div>
-              <h4 className="font-bold text-gray-500">Statistiques avancées</h4>
-              <p className="text-sm text-gray-400 text-center max-w-xs mt-2">Le module d'analyse prédictive et de comparaison mensuelle sera bientôt disponible.</p>
-           </div>
-        </div>
-
-        <div className="flex gap-4 p-6 dashboard-card items-center justify-between">
-           <div>
-              <h4 className="font-bold">Exporter les données</h4>
-              <p className="text-xs text-gray-400">Téléchargez les rapports au format PDF ou Excel.</p>
-           </div>
-           <div className="flex gap-3">
-              <Button onClick={() => handleExport('pdf')} className="w-auto px-6 bg-slate-800 hover:bg-slate-900 text-white"><Printer size={16} className="mr-2"/> Imprimer</Button>
-              <Button onClick={() => handleExport('excel')} className="w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white"><FileSpreadsheet size={16} className="mr-2"/> Excel</Button>
+              <p className="text-lg font-medium text-gray-500">Fonctionnalité de rapport détaillé à venir</p>
            </div>
         </div>
      </div>
   );
 
-  // --- MAIN LAYOUT ---
   return (
-    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-main)] font-sans transition-colors duration-300">
-      <Header 
-        user={user} 
-        currentSite={currentSite} 
-        onSiteChange={setCurrentSite} 
-        onLogout={onLogout} 
-        onThemeToggle={handleThemeToggle}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0f172a] transition-colors duration-300 font-sans text-sm text-gray-800 dark:text-gray-200">
+       <Sidebar 
+          role={user.role} 
+          activeItem={activeMenu} 
+          onItemClick={(item) => { setActiveMenu(item); setIsSidebarOpen(false); }} 
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+       />
 
-      <Sidebar 
-        role={user.role} 
-        activeItem={activeMenu} 
-        onItemClick={setActiveMenu} 
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+       <div className="lg:pl-[270px] min-h-screen flex flex-col transition-all duration-300">
+          <Header 
+            user={user} 
+            currentSite={currentSite} 
+            onSiteChange={setCurrentSite} 
+            onLogout={onLogout} 
+            onThemeToggle={handleThemeToggle}
+            onToggleSidebar={() => setIsSidebarOpen(true)}
+            onNavigate={(page) => setActiveMenu(page)}
+          />
 
-      <main 
-        className={`
-          flex-grow pt-28 px-4 md:px-10 pb-12
-          transition-all duration-300 ease-in-out
-          md:ml-[270px] 
-          max-w-[1920px] mx-auto w-full
-        `}
-      >
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 animate-fade-in">
-          <div>
-             <h2 className="text-4xl font-bold tracking-tight text-[var(--text-main)]">{activeMenu}</h2>
-             <p className="text-gray-400 text-sm mt-1">Bienvenue dans votre espace de gestion, {user.username}.</p>
-          </div>
-          <div className="flex gap-3">
-             <button className="bg-white dark:bg-gray-800 text-gray-700 dark:text-white border border-gray-200 dark:border-gray-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition shadow-sm flex items-center gap-2">
-                <Download size={16}/> <span>Export Rapide</span>
-             </button>
-          </div>
-        </div>
-        
-        {/* Content Area */}
-        {activeMenu === 'Tableau de bord' ? renderDashboardContent() :
-         activeMenu === 'Caisse' ? renderCaisse() :
-         activeMenu === 'Gestion de stock' ? renderStockManagement() :
-         activeMenu === 'Planning des repas' ? renderMealPlanning() :
-         activeMenu === 'Appartements' ? renderAppartements() :
-         activeMenu === 'Blanchisserie' ? renderBlanchisserie() :
-         activeMenu === 'Bons de restauration' ? renderRestaurant() :
-         activeMenu === 'Les employés' || activeMenu === 'Présence' ? renderEmployees() :
-         activeMenu === 'Rapports' ? renderReports() :
-         activeMenu === 'Paramètres' ? renderSettings() :
-         (
-           <div className="dashboard-card h-96 flex items-center justify-center flex-col opacity-50 border-dashed border-2 border-gray-300 dark:border-gray-700 bg-transparent shadow-none">
-              <div className="p-6 bg-gray-100 dark:bg-gray-800 rounded-full mb-4">
-                 <Package size={48} className="text-gray-400" />
-              </div>
-              <p className="text-lg font-medium">Le module <span className="font-bold">"{activeMenu}"</span> est en cours de développement.</p>
-              <p className="text-sm text-gray-400 mt-2">Veuillez revenir plus tard.</p>
-           </div>
-         )
-        }
-      </main>
+          <main className="flex-1 p-4 md:p-8 pt-24 md:pt-28">
+             <div className="max-w-7xl mx-auto h-full">
+                {activeMenu === 'Tableau de bord' && renderDashboardContent()}
+                {activeMenu === 'Caisse' && renderCaisse()}
+                {activeMenu === 'Gestion de stock' && renderStockManagement()}
+                {activeMenu === 'Planning des repas' && renderMealPlanning()}
+                {activeMenu === 'Appartements' && renderAppartements()}
+                {activeMenu === 'Blanchisserie' && renderBlanchisserie()}
+                {activeMenu === 'Bons de restauration' && renderRestaurant()}
+                {activeMenu === 'Les employés' && renderEmployees()}
+                {activeMenu === 'Rapports' && renderReports()}
+                {activeMenu === 'Paramètres' && renderSettings()}
+             </div>
+          </main>
+       </div>
     </div>
   );
 };
 
-const LoginPage: React.FC<{ onLogin: (u: User) => void }> = ({ onLogin }) => {
+const Login = ({ onLogin }: { onLogin: (u: User) => void }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>(UserRole.Reception);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(UserRole.Reception);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const user = AuthService.validateUser(username, password, role);
-    if (user) {
-      onLogin(user);
-    } else {
-      setError('Accès refusé. Vérifiez vos identifiants.');
-    }
+    setError('');
+    setIsLoading(true);
+    
+    // Simulate network delay
+    setTimeout(() => {
+        const user = AuthService.validateUser(username, password, selectedRole);
+        if (user) {
+            onLogin(user);
+        } else {
+            setError('Identifiants incorrects');
+            setIsLoading(false);
+        }
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f172a] relative overflow-hidden text-gray-200 px-4">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-         <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-gold/5 blur-[120px] animate-pulse-slow"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-blue-900/10 blur-[100px]"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-[#0f172a] relative overflow-hidden text-gray-800 dark:text-gray-200">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-brand-gold/5 blur-[100px] animate-pulse-slow"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/5 blur-[100px] animate-pulse-slow" style={{animationDelay: '2s'}}></div>
+        </div>
 
-      <div className="w-full max-w-sm md:max-w-md z-10 animate-fade-in-up">
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative group hover:border-brand-gold/20 transition-all duration-500">
-           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-gold to-transparent opacity-70"></div>
-
-           <div className="p-6 md:p-8">
-              <div className="text-center mb-6 md:mb-8">
-                <div className="inline-block p-1 rounded-full border border-brand-gold/30 mb-4 bg-black/20 shadow-lg">
-                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-white/90 flex items-center justify-center">
-                      <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover" />
-                   </div>
+        <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/10 relative z-10 animate-fade-in-up">
+            <div className="flex flex-col items-center mb-8">
+                <div className="w-24 h-24 rounded-full bg-white p-1 mb-4 shadow-lg border-2 border-brand-gold/20">
+                    <img src={LOGO_URL} alt="Logo" className="w-full h-full object-cover rounded-full" />
                 </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-wide font-serif mb-2">Résidence Samia</h1>
-                <p className="text-xs text-brand-gold font-medium uppercase tracking-[0.2em]">L'art de l'hospitalité</p>
-              </div>
+                <h2 className="text-3xl font-bold text-white tracking-tight">Bienvenue</h2>
+                <p className="text-gray-400 text-sm mt-1 uppercase tracking-widest">Espace Professionnel</p>
+            </div>
 
-              <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-gray-500 mb-3 tracking-wider text-center">Sélectionnez votre poste</label>
-                  <div className="relative group">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-gold transition-colors duration-300 pointer-events-none z-10">
-                        <Briefcase size={18} />
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rôle</label>
+                    <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18}/>
+                        <select 
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                            className="w-full pl-12 pr-4 py-3.5 bg-black/20 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-brand-gold focus:border-transparent outline-none appearance-none transition-all hover:bg-black/30"
+                        >
+                            {ROLES.map(role => (
+                                <option key={role} value={role} className="text-black">{role}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" size={16}/>
                     </div>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as UserRole)}
-                      className="w-full p-[14px] pl-10 appearance-none bg-black/30 border-white/10 !text-white focus:bg-black/50 border-none rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-gold/50 transition-all duration-300"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r} value={r} className="text-black bg-white">{r}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                       <ChevronDown size={18} />
-                    </div>
-                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <Input 
-                    icon={UserProfileIcon}
+                <Input 
+                    icon={UserIcon} 
+                    placeholder="Identifiant" 
                     value={username} 
-                    onChange={(e) => setUsername(e.target.value)} 
-                    placeholder="Identifiant"
-                    className="bg-black/30 border-white/10 !text-white placeholder-gray-500 focus:bg-black/50 border-none rounded-lg"
-                  />
-                  
-                  <Input 
-                    icon={Lock}
-                    type="password"
+                    onChange={e => setUsername(e.target.value)}
+                    className="bg-black/20 border-white/10 text-white placeholder-gray-500 focus:ring-brand-gold"
+                />
+                
+                <Input 
+                    icon={Lock} 
+                    type="password" 
+                    placeholder="Mot de passe" 
                     value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    placeholder="Mot de passe"
-                    className="bg-black/30 border-white/10 !text-white placeholder-gray-500 focus:bg-black/50 border-none rounded-lg"
-                  />
-                </div>
+                    onChange={e => setPassword(e.target.value)}
+                    className="bg-black/20 border-white/10 text-white placeholder-gray-500 focus:ring-brand-gold"
+                />
 
                 {error && (
-                  <div className="text-red-400 text-xs text-center bg-red-900/20 p-2 rounded border border-red-500/20 flex items-center justify-center gap-2 animate-pulse">
-                    <AlertTriangle size={12}/> {error}
-                  </div>
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm animate-shake">
+                        <AlertTriangle size={16} /> {error}
+                    </div>
                 )}
 
-                <Button 
-                  type="submit" 
-                  className="w-full py-3.5 bg-gradient-to-r from-brand-gold to-yellow-600 text-black font-bold rounded-lg shadow-lg hover:shadow-brand-gold/20 hover:scale-[1.01] transition-all duration-300 text-sm tracking-wide uppercase border-none"
-                >
-                   Connexion Sécurisée
+                <Button type="submit" className="w-full py-4 bg-gradient-to-r from-brand-gold to-yellow-600 hover:to-yellow-500 text-white font-bold shadow-lg shadow-brand-gold/20 mt-4">
+                    {isLoading ? <Loader2 className="animate-spin mx-auto" /> : 'Se connecter'}
                 </Button>
-              </form>
-           </div>
-           
-           <div className="bg-black/20 py-3 px-8 text-center border-t border-white/5">
-              <p className="text-[10px] text-gray-500">© 2025 Résidence Samia Suite Hotel. Accès restreint.</p>
-           </div>
+            </form>
+            
+            <div className="mt-8 text-center text-xs text-gray-500">
+                &copy; 2025 Résidence Samia. Tous droits réservés.
+            </div>
         </div>
-      </div>
     </div>
   );
 };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(() => AuthService.getPersistedUser());
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const persistedUser = AuthService.getPersistedUser();
+    if (persistedUser) {
+        setUser(persistedUser);
+    }
+    setLoading(false);
+  }, []);
 
   const handleLogin = (u: User) => {
     setUser(u);
@@ -1831,15 +1691,18 @@ const App: React.FC = () => {
     AuthService.logout();
   };
 
-  if (loading) {
-    return <LoadingScreen onFinished={() => setLoading(false)} />;
+  if (showSplash) {
+      return <LoadingScreen onFinished={() => setShowSplash(false)} />;
   }
+
+  if (loading) return null;
 
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage onLogin={handleLogin} />} />
-        <Route path="/*" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />} />
+        <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
+        <Route path="/" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </HashRouter>
   );
