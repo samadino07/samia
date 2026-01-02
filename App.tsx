@@ -978,7 +978,7 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     const currentBalance = totalFunds - totalExpenses;
 
     const isBoss = user.role === UserRole.Boss;
-    const isGerant = user.role === UserRole.Gerant; // STRICT SEPARATION
+    const isGerant = user.role === UserRole.Gerant || user.role === UserRole.Boss; 
 
     return (
       <div className="space-y-6 animate-fade-in">
@@ -1147,569 +1147,6 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
     );
   };
 
-  const renderStockManagement = () => (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-[var(--text-main)]">📦 Gestion de Stock</h3>
-        <Button onClick={() => setShowAddForm(true)} className="w-auto px-4 py-2 text-sm flex items-center gap-2">
-           <Plus size={16}/> Nouvel Article
-        </Button>
-      </div>
-
-      {showAddForm && (
-        <div className="mb-6 p-4 bg-[var(--bg-card)] rounded-lg border border-gray-700">
-           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-              <Input label="Nom" value={newProduct.nom} onChange={e => setNewProduct({...newProduct, nom: e.target.value})} />
-              <Input label="Catégorie" value={newProduct.cat} onChange={e => setNewProduct({...newProduct, cat: e.target.value})} />
-              <Input label="Qté" type="number" value={newProduct.quantite} onChange={e => setNewProduct({...newProduct, quantite: parseInt(e.target.value)})} />
-              <Input label="Unité" value={newProduct.unite} onChange={e => setNewProduct({...newProduct, unite: e.target.value})} />
-              <div className="mb-3">
-                 <Button onClick={handleAddProduct}>Ajouter</Button>
-              </div>
-           </div>
-           <button onClick={() => setShowAddForm(false)} className="text-red-500 text-sm mt-2 hover:underline">Annuler</button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stockItems.map((item, idx) => (
-          <div key={idx} className="dashboard-card flex justify-between items-center">
-             <div>
-                <div className="font-bold text-lg text-[var(--text-main)]">{item.nom}</div>
-                <div className="text-sm opacity-70">{item.cat} • {item.prix} DH/{item.unite}</div>
-             </div>
-             <div className="flex items-center gap-3 bg-gray-900/10 p-2 rounded-lg">
-                <button onClick={() => handleStockUpdate(idx, -1)} className="p-1 hover:bg-red-200 text-red-600 rounded"><Minus size={18}/></button>
-                <span className="font-mono font-bold w-8 text-center">{item.quantite}</span>
-                <button onClick={() => handleStockUpdate(idx, 1)} className="p-1 hover:bg-green-200 text-green-600 rounded"><Plus size={18}/></button>
-             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderMealPlanning = () => (
-    <div className="space-y-6 animate-fade-in">
-       <div className="flex justify-between items-center">
-          <h3 className="font-bold text-xl text-[var(--text-main)]">🍽️ Planning Hebdomadaire</h3>
-          <Button onClick={() => setShowDishForm(true)} className="w-auto px-4 text-sm"><Plus size={16}/> Nouveau Plat</Button>
-       </div>
-
-       {showDishForm && (
-         <div className="dashboard-card border border-blue-500/30">
-            <h4 className="font-bold mb-4">Ajouter un plat</h4>
-            <div className="grid grid-cols-2 gap-4">
-               <Input label="Nom du plat" value={newDish.name} onChange={e => setNewDish({...newDish, name: e.target.value})} />
-               <Input label="Ingrédients" value={newDish.ingredients} onChange={e => setNewDish({...newDish, ingredients: e.target.value})} />
-               <Input label="Coût (DH)" type="number" value={newDish.cost} onChange={e => setNewDish({...newDish, cost: parseFloat(e.target.value)})} />
-               <div className="mb-3">
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                 <select className="w-full p-3 rounded border" value={newDish.category} onChange={e => setNewDish({...newDish, category: e.target.value as MealType})}>
-                   <option value="PtDej">Petit Déj</option>
-                   <option value="Dej">Déjeuner</option>
-                   <option value="Gouter">Goûter</option>
-                   <option value="Diner">Dîner</option>
-                 </select>
-               </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-               <Button onClick={handleAddDish}>Enregistrer</Button>
-               <Button variant="secondary" onClick={() => setShowDishForm(false)}>Annuler</Button>
-            </div>
-         </div>
-       )}
-
-       <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
-             <thead>
-                <tr className="bg-black/10 text-[var(--text-main)]">
-                   <th className="p-3 border-b border-gray-700/20">Jour</th>
-                   <th className="p-3 border-b border-gray-700/20">Petit Déjeuner</th>
-                   <th className="p-3 border-b border-gray-700/20">Déjeuner</th>
-                   <th className="p-3 border-b border-gray-700/20">Goûter</th>
-                   <th className="p-3 border-b border-gray-700/20">Dîner</th>
-                </tr>
-             </thead>
-             <tbody>
-                {Object.entries(weeklyPlan).map(([day, plan]) => (
-                   <tr key={day} className="border-b border-gray-700/10 hover:bg-white/5">
-                      <td className="p-3 font-bold text-[var(--text-main)]">{day}</td>
-                      {(['PtDej', 'Dej', 'Gouter', 'Diner'] as MealType[]).map(type => {
-                         const dish = getDish(plan[type]);
-                         return (
-                            <td key={type} className="p-3 cursor-pointer hover:bg-white/10" onClick={() => setEditingSlot({day, type})}>
-                               {dish ? (
-                                 <div>
-                                   <div className="font-medium">{dish.name}</div>
-                                   <div className="text-xs opacity-60">{dish.cost} DH</div>
-                                 </div>
-                               ) : <span className="text-gray-400 italic">Vide</span>}
-                            </td>
-                         );
-                      })}
-                   </tr>
-                ))}
-             </tbody>
-          </table>
-       </div>
-       
-       {editingSlot && (
-         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg max-w-sm w-full">
-               <h4 className="font-bold text-lg mb-4 text-gray-800">Choisir pour {editingSlot.day} ({editingSlot.type})</h4>
-               <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {dishes.filter(d => d.category === editingSlot.type).map(d => (
-                     <div key={d.id} onClick={() => handleAssignDish(d.id)} className="p-2 hover:bg-gray-100 cursor-pointer rounded border border-gray-100">
-                        <div className="font-bold text-gray-800">{d.name}</div>
-                        <div className="text-xs text-gray-500">{d.ingredients}</div>
-                     </div>
-                  ))}
-               </div>
-               <button onClick={() => setEditingSlot(null)} className="mt-4 text-sm text-red-500 underline w-full text-center">Fermer</button>
-            </div>
-         </div>
-       )}
-    </div>
-  );
-
-  const renderAppartements = () => (
-    <div className="space-y-6 animate-fade-in">
-       <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-[var(--bg-card)] p-4 rounded-lg shadow-sm">
-          <div className="relative w-full md:w-1/3">
-             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-             <input 
-               type="text" 
-               placeholder="Rechercher client (Actuel ou Historique)..." 
-               className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#fefefe] border border-gray-300 focus:outline-none focus:border-blue-500 text-gray-800"
-               value={clientSearchQuery}
-               onChange={(e) => setClientSearchQuery(e.target.value)}
-             />
-          </div>
-          <div className="flex gap-4 text-sm">
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div> Libre</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500"></div> Occupé</div>
-             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-orange-500"></div> Partiel</div>
-          </div>
-       </div>
-
-       {clientSearchQuery ? (
-          <div className="dashboard-card">
-             <h3 className="font-bold mb-4 text-[var(--text-main)]">Résultats de recherche</h3>
-             {searchResults.length === 0 ? <p className="text-gray-500">Aucun résultat.</p> : (
-               <table className="w-full text-sm">
-                 <thead>
-                   <tr className="text-left text-gray-500 uppercase text-xs">
-                     <th className="pb-2">Client</th>
-                     <th className="pb-2">Apt</th>
-                     <th className="pb-2">Date Entrée</th>
-                     <th className="pb-2">Date Sortie</th>
-                     <th className="pb-2">Statut</th>
-                   </tr>
-                 </thead>
-                 <tbody>
-                   {searchResults.map(res => (
-                     <tr key={res.id} className="border-b border-gray-700/10">
-                       <td className="py-2 font-medium">{res.clientName}</td>
-                       <td className="py-2">{res.aptNumber} ({res.site})</td>
-                       <td className="py-2">{res.entryDate}</td>
-                       <td className="py-2">{res.leaveDate}</td>
-                       <td className="py-2">
-                         <span className={`px-2 py-0.5 rounded text-xs ${res.status === 'En cours' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                           {res.status}
-                         </span>
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-             )}
-          </div>
-       ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-             {apartments.filter(a => user?.role === 'Boss' || a.site === user?.site).map(apt => {
-                const isFull = apt.currentClients.length >= apt.capacity;
-                const isEmpty = apt.currentClients.length === 0;
-                const statusColor = isEmpty ? 'bg-green-500' : isFull ? 'bg-red-500' : 'bg-orange-500';
-                
-                return (
-                  <div 
-                    key={apt.id} 
-                    onClick={() => { setSelectedApt(apt); setShowCheckInModal(true); }}
-                    className="bg-[var(--bg-card)] p-4 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 border-transparent hover:border-blue-500 relative group"
-                  >
-                     <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${statusColor}`}></div>
-                     <div className="font-bold text-lg text-[var(--text-main)]">{apt.number}</div>
-                     <div className="text-xs text-gray-500">{apt.building}</div>
-                     <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                        <Users size={12}/> {apt.currentClients.length} / {apt.capacity}
-                     </div>
-                  </div>
-                );
-             })}
-          </div>
-       )}
-
-       {/* Modal Detail Appartement */}
-       {selectedApt && showCheckInModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-             <div className="bg-white p-6 rounded-xl w-full max-w-lg text-gray-800">
-                <div className="flex justify-between items-start mb-6">
-                   <div>
-                      <h3 className="text-2xl font-bold">{selectedApt.number} - {selectedApt.building}</h3>
-                      <p className="text-sm text-gray-500">{selectedApt.site} | Capacité: {selectedApt.capacity} | Actuel: {selectedApt.currentClients.length}</p>
-                   </div>
-                   <button onClick={() => setShowCheckInModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
-                </div>
-
-                {/* Clients Actuels */}
-                <div className="mb-6">
-                   <h4 className="font-bold text-sm uppercase text-gray-500 mb-2">Occupants Actuels</h4>
-                   {selectedApt.currentClients.length === 0 ? (
-                      <p className="text-sm italic text-gray-400">Aucun occupant.</p>
-                   ) : (
-                      <div className="space-y-2">
-                         {selectedApt.currentClients.map(client => (
-                            <div key={client.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border border-gray-200">
-                               <div>
-                                  <div className="font-bold">{client.name}</div>
-                                  <div className="text-xs text-gray-500">Depuis: {client.entryDate} | Type: {client.type}</div>
-                               </div>
-                               <button 
-                                 onClick={() => handleCheckOut(client.id)}
-                                 className="text-red-500 hover:bg-red-50 px-3 py-1 rounded text-sm border border-red-200"
-                               >
-                                 Sortie
-                               </button>
-                            </div>
-                         ))}
-                      </div>
-                   )}
-                </div>
-
-                {/* Nouveau Client Form */}
-                {selectedApt.currentClients.length < selectedApt.capacity && (
-                   <div className="border-t pt-4">
-                      <h4 className="font-bold text-sm uppercase text-blue-600 mb-3">Nouvelle Arrivée</h4>
-                      <div className="space-y-3">
-                         <Input label="Nom Complet" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} className="bg-white" />
-                         <div className="grid grid-cols-2 gap-4">
-                            <Input label="Date Entrée" type="date" value={newClient.date} onChange={e => setNewClient({...newClient, date: e.target.value})} className="bg-white" />
-                            <div>
-                               <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                               <select 
-                                 className="w-full p-[14px] border border-gray-300 rounded-lg bg-white"
-                                 value={newClient.type}
-                                 onChange={(e) => setNewClient({...newClient, type: e.target.value as HebergementType})}
-                               >
-                                  <option value="1/4">1/4 (4 Pers)</option>
-                                  <option value="1/3">1/3 (3 Pers)</option>
-                                  <option value="1/2">1/2 (2 Pers)</option>
-                                  <option value="1/1">1/1 (1 Pers)</option>
-                               </select>
-                            </div>
-                         </div>
-                         <Button onClick={handleCheckIn}>Valider Entrée</Button>
-                      </div>
-                   </div>
-                )}
-             </div>
-          </div>
-       )}
-    </div>
-  );
-
-  const renderBlanchisserie = () => (
-    <div className="space-y-6 animate-fade-in">
-       <div className="flex justify-between items-center">
-          <h3 className="font-bold text-xl text-[var(--text-main)]">👕 Gestion Blanchisserie</h3>
-          <Button onClick={() => setShowLaundryForm(true)} className="w-auto px-4"><Plus size={16}/> Nouvelle Demande</Button>
-       </div>
-
-       {showLaundryForm && (
-          <div className="dashboard-card border border-blue-500/30 mb-6">
-             <h4 className="font-bold mb-4">Créer une demande</h4>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                   <label className="block text-sm font-medium mb-1">Appartement</label>
-                   <select 
-                     className="w-full p-3 rounded bg-gray-50 border text-black"
-                     value={newLaundryOrder.apartmentId}
-                     onChange={(e) => setNewLaundryOrder({...newLaundryOrder, apartmentId: e.target.value, clientId: ''})}
-                   >
-                     <option value="">Choisir...</option>
-                     {apartments.filter(a => a.currentClients.length > 0 && (user?.role === 'Boss' || a.site === user?.site)).map(a => (
-                        <option key={a.id} value={a.id}>{a.number} ({a.site})</option>
-                     ))}
-                   </select>
-                </div>
-                <div>
-                   <label className="block text-sm font-medium mb-1">Client</label>
-                   <select 
-                     className="w-full p-3 rounded bg-gray-50 border text-black"
-                     value={newLaundryOrder.clientId}
-                     disabled={!newLaundryOrder.apartmentId}
-                     onChange={(e) => setNewLaundryOrder({...newLaundryOrder, clientId: e.target.value})}
-                   >
-                     <option value="">Choisir...</option>
-                     {apartments.find(a => a.id === newLaundryOrder.apartmentId)?.currentClients.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                     ))}
-                   </select>
-                </div>
-                <Input label="Détail Linges" placeholder="Ex: 2 Draps, 1 Serviette" value={newLaundryOrder.items} onChange={e => setNewLaundryOrder({...newLaundryOrder, items: e.target.value})} />
-             </div>
-             <div className="flex gap-2">
-                <Button onClick={handleAddLaundryOrder} className="w-auto">Valider</Button>
-                <Button variant="secondary" onClick={() => setShowLaundryForm(false)} className="w-auto">Annuler</Button>
-             </div>
-          </div>
-       )}
-
-       <div className="grid grid-cols-1 gap-4">
-          {laundryOrders.map(order => (
-             <div key={order.id} className="dashboard-card flex flex-col md:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-4">
-                   <div className="p-3 bg-blue-100 text-blue-600 rounded-full"><Shirt size={24}/></div>
-                   <div>
-                      <div className="font-bold text-[var(--text-main)]">{order.clientName} <span className="text-xs opacity-60">({order.apartmentNumber})</span></div>
-                      <div className="text-sm opacity-80">{order.items}</div>
-                      <div className="text-xs opacity-50">{order.date}</div>
-                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                   {(['En attente', 'En blanchisserie', 'En réception', 'Livré'] as LaundryStatus[]).map((step, i, arr) => (
-                      <div key={step} className="flex items-center">
-                         <div 
-                           onClick={() => updateLaundryStatus(order.id, step)}
-                           className={`
-                             px-3 py-1 rounded-full text-xs cursor-pointer border transition-all
-                             ${order.status === step 
-                               ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-lg transform scale-105' 
-                               : 'bg-transparent border-gray-600 text-gray-500 hover:border-gray-400'}
-                           `}
-                         >
-                           {step}
-                         </div>
-                         {i < arr.length - 1 && <div className="w-4 h-0.5 bg-gray-700 mx-1"></div>}
-                      </div>
-                   ))}
-                </div>
-             </div>
-          ))}
-       </div>
-    </div>
-  );
-
-  const renderRestaurant = () => (
-    <div className="space-y-6 animate-fade-in">
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Prise de Commande */}
-          <div className="dashboard-card col-span-1 lg:col-span-1">
-             <h3 className="font-bold text-lg mb-4 text-[var(--text-main)]">🍽️ Nouvelle Commande</h3>
-             <div className="space-y-4">
-                <div>
-                   <label className="block text-sm font-medium mb-1 opacity-80">Type de Service</label>
-                   <div className="flex bg-gray-100 rounded p-1">
-                      <button 
-                        className={`flex-1 py-1 text-sm rounded ${!newRestoOrder.isDrinkOnly ? 'bg-white shadow text-black' : 'text-gray-500'}`}
-                        onClick={() => setNewRestoOrder({...newRestoOrder, isDrinkOnly: false})}
-                      >
-                        Repas ({currentMealService})
-                      </button>
-                      <button 
-                        className={`flex-1 py-1 text-sm rounded ${newRestoOrder.isDrinkOnly ? 'bg-white shadow text-black' : 'text-gray-500'}`}
-                        onClick={() => setNewRestoOrder({...newRestoOrder, isDrinkOnly: true})}
-                      >
-                        Cafétéria
-                      </button>
-                   </div>
-                </div>
-
-                <div>
-                   <label className="block text-sm font-medium mb-1 opacity-80">Client</label>
-                   <select 
-                     className="w-full p-2 rounded border border-gray-300 bg-white text-black"
-                     value={newRestoOrder.clientId}
-                     onChange={(e) => setNewRestoOrder({...newRestoOrder, clientId: e.target.value})}
-                   >
-                     <option value="">Sélectionner Client...</option>
-                     {apartments.flatMap(a => a.currentClients.map(c => ({...c, apt: a.number}))).map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.apt})</option>
-                     ))}
-                   </select>
-                </div>
-
-                {newRestoOrder.isDrinkOnly && (
-                   <div>
-                      <label className="block text-sm font-medium mb-1 opacity-80">Boissons</label>
-                      <Input 
-                        placeholder="Ex: 2 Cafés, 1 Eau" 
-                        value={newRestoOrder.drinks.join(', ')}
-                        onChange={(e) => setNewRestoOrder({...newRestoOrder, drinks: e.target.value.split(',')})}
-                      />
-                   </div>
-                )}
-
-                <Button onClick={handleValidateRestoOrder} className="w-full mt-4">
-                   <Printer size={18} className="mr-2"/> Générer Bon
-                </Button>
-             </div>
-          </div>
-
-          {/* Historique du Service */}
-          <div className="dashboard-card col-span-1 lg:col-span-2">
-             <h3 className="font-bold text-lg mb-4 text-[var(--text-main)]">📜 Historique {new Date().toLocaleDateString()}</h3>
-             <div className="overflow-auto max-h-[500px]">
-                <table className="w-full text-sm text-left">
-                   <thead className="bg-black/10 text-gray-500 uppercase text-xs">
-                      <tr>
-                         <th className="p-3">Heure</th>
-                         <th className="p-3">Client</th>
-                         <th className="p-3">Type</th>
-                         <th className="p-3">Détail</th>
-                         <th className="p-3">Action</th>
-                      </tr>
-                   </thead>
-                   <tbody>
-                      {restaurantOrders.map(order => (
-                         <tr key={order.id} className="border-b border-gray-700/10 hover:bg-white/5">
-                            <td className="p-3 font-mono">{order.time}</td>
-                            <td className="p-3 font-medium">{order.clientName} <br/><span className="text-xs opacity-60">{order.aptNumber}</span></td>
-                            <td className="p-3">
-                               <span className={`px-2 py-1 rounded text-xs ${order.type === 'Repas' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
-                                  {order.type === 'Repas' ? order.mealType : 'Café'}
-                               </span>
-                            </td>
-                            <td className="p-3 text-xs opacity-70">
-                               {order.type === 'Repas' 
-                                 ? (weeklyPlan[new Date().toLocaleDateString('fr-FR', {weekday: 'long'}) as any]?.[order.mealType!] ? getDish(weeklyPlan[new Date().toLocaleDateString('fr-FR', {weekday: 'long'}) as any][order.mealType!])?.name : 'Menu du jour') 
-                                 : order.items.join(', ')}
-                            </td>
-                            <td className="p-3">
-                               <button onClick={() => setShowBonModal(order)} className="text-blue-500 hover:underline text-xs">Re-imprimer</button>
-                            </td>
-                         </tr>
-                      ))}
-                   </tbody>
-                </table>
-             </div>
-          </div>
-       </div>
-
-       {/* Modal Ticket */}
-       {showBonModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-             <div className="bg-white text-black p-8 rounded-none w-80 shadow-2xl font-mono text-sm relative">
-                <div className="text-center border-b-2 border-black pb-4 mb-4">
-                   <h2 className="text-2xl font-bold uppercase">Résidence Samia</h2>
-                   <p className="text-xs">{showBonModal.site}</p>
-                   <p className="text-xs mt-1">{showBonModal.date} - {showBonModal.time}</p>
-                </div>
-                
-                <div className="mb-4">
-                   <div className="flex justify-between font-bold text-lg mb-2">
-                      <span>{showBonModal.aptNumber}</span>
-                      <span>{showBonModal.clientName.split(' ')[0]}</span>
-                   </div>
-                   <div className="border-t border-dashed border-gray-400 py-2">
-                      <div className="flex justify-between">
-                         <span>SERVICE:</span>
-                         <span className="font-bold uppercase">{showBonModal.type === 'Repas' ? showBonModal.mealType : 'CAFETARIA'}</span>
-                      </div>
-                   </div>
-                   {showBonModal.items && showBonModal.items.length > 0 && (
-                      <div className="mt-2 text-xs">
-                         {showBonModal.items.map((it, i) => <div key={i}>- {it}</div>)}
-                      </div>
-                   )}
-                </div>
-
-                <div className="text-center border-t-2 border-black pt-4 mt-8">
-                   <p className="font-bold text-lg">BON POUR ACCORD</p>
-                   <div className="h-16 mt-2 border border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 italic">
-                      Signature Client
-                   </div>
-                </div>
-
-                <button 
-                  onClick={() => setShowBonModal(null)}
-                  className="absolute -top-4 -right-4 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-lg no-print"
-                >
-                   <X size={20}/>
-                </button>
-             </div>
-          </div>
-       )}
-    </div>
-  );
-
-  const renderEmployees = () => (
-    <div className="space-y-6 animate-fade-in">
-       <div className="flex justify-between items-center">
-          <h3 className="font-bold text-xl text-[var(--text-main)]">👥 Gestion du Personnel</h3>
-          {user?.role === 'Boss' && (
-             <Button onClick={() => setShowEmployeeForm(true)} className="w-auto px-4"><UserPlus size={16} className="mr-2"/> Ajouter Employé</Button>
-          )}
-       </div>
-
-       {showEmployeeForm && (
-          <div className="dashboard-card border border-green-500/30 mb-6">
-             <h4 className="font-bold mb-4">Nouveau Contrat</h4>
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Input label="Nom" value={newEmployee.name} onChange={e => setNewEmployee({...newEmployee, name: e.target.value})} />
-                <Input label="Fonction" value={newEmployee.function} onChange={e => setNewEmployee({...newEmployee, function: e.target.value})} />
-                <Input label="Tél" value={newEmployee.phone} onChange={e => setNewEmployee({...newEmployee, phone: e.target.value})} />
-                <Input label="Salaire" type="number" value={newEmployee.monthlySalary} onChange={e => setNewEmployee({...newEmployee, monthlySalary: parseFloat(e.target.value)})} />
-             </div>
-             <div className="flex gap-2 mt-4">
-                <Button onClick={handleAddEmployee} className="w-auto">Enregistrer</Button>
-                <Button variant="secondary" onClick={() => setShowEmployeeForm(false)} className="w-auto">Annuler</Button>
-             </div>
-          </div>
-       )}
-
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {employees.map(emp => (
-             <div key={emp.id} className="dashboard-card hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                   <div>
-                      <h4 className="font-bold text-lg text-[var(--text-main)]">{emp.name}</h4>
-                      <p className="text-sm opacity-70">{emp.function} • {emp.shift}</p>
-                   </div>
-                   <div className={`px-2 py-1 rounded text-xs font-bold ${emp.status === 'Présent' ? 'bg-green-100 text-green-700' : emp.status === 'Absent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                      {emp.status}
-                   </div>
-                </div>
-                
-                <div className="space-y-3 text-sm">
-                   <div className="flex justify-between border-b border-gray-700/10 pb-2">
-                      <span className="opacity-70">Salaire Mensuel:</span>
-                      <span className="font-mono font-bold">{emp.monthlySalary} DH</span>
-                   </div>
-                   <div className="flex justify-between border-b border-gray-700/10 pb-2">
-                      <span className="opacity-70">Absences ce mois:</span>
-                      <div className="flex items-center gap-2">
-                         <button onClick={() => updateEmployeeAbsences(emp.id, Math.max(0, emp.absences - 1))} className="text-gray-400 hover:text-white"><Minus size={14}/></button>
-                         <span className="font-bold text-red-400">{emp.absences} j</span>
-                         <button onClick={() => updateEmployeeAbsences(emp.id, emp.absences + 1)} className="text-gray-400 hover:text-white"><Plus size={14}/></button>
-                      </div>
-                   </div>
-                   <div className="pt-2">
-                      <label className="text-xs uppercase opacity-50 mb-1 block">Pointage Aujourd'hui</label>
-                      <div className="flex gap-2">
-                         <button onClick={() => updateEmployeeStatus(emp.id, 'Présent')} className={`flex-1 py-1 rounded text-xs ${emp.status === 'Présent' ? 'bg-green-600 text-white' : 'bg-gray-700'}`}>Présent</button>
-                         <button onClick={() => updateEmployeeStatus(emp.id, 'Retard')} className={`flex-1 py-1 rounded text-xs ${emp.status === 'Retard' ? 'bg-orange-600 text-white' : 'bg-gray-700'}`}>Retard</button>
-                         <button onClick={() => updateEmployeeStatus(emp.id, 'Absent')} className={`flex-1 py-1 rounded text-xs ${emp.status === 'Absent' ? 'bg-red-600 text-white' : 'bg-gray-700'}`}>Absent</button>
-                      </div>
-                   </div>
-                </div>
-             </div>
-          ))}
-       </div>
-    </div>
-  );
-
   const renderReports = () => (
     <div className="space-y-6 animate-fade-in">
        <div className="flex justify-between items-center">
@@ -1751,13 +1188,673 @@ const Dashboard: React.FC<{ user: User | null; onLogout: () => void }> = ({ user
                      ]}
                      cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value"
                    >
-                      {/* Cells mapped in data config */}
+                     {[
+                       {name: 'Salaires', value: employees.reduce((a, b) => a + b.monthlySalary, 0), color: '#3b82f6'},
+                       {name: 'Courses', value: cashExpenses.filter(e => e.category === 'Courses').reduce((a, b) => a + b.amount, 0), color: '#ef4444'},
+                       {name: 'Maintenance', value: cashExpenses.filter(e => e.category === 'Maintenance').reduce((a, b) => a + b.amount, 0), color: '#f59e0b'},
+                       {name: 'Autres', value: 1000, color: '#6b7280'}
+                     ].map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.color} />
+                     ))}
                    </Pie>
                    <RechartsTooltip />
                    <Legend />
                 </PieChart>
              </ResponsiveContainer>
           </div>
+       </div>
+    </div>
+  );
+
+  const renderStockManagement = () => (
+    <div className="animate-fade-in space-y-6">
+       <div className="flex justify-between items-center">
+         <h3 className="font-bold text-xl text-[var(--text-main)]">📦 Gestion de Stock</h3>
+         <Button onClick={() => setShowAddForm(true)} className="w-auto px-4 flex items-center gap-2">
+           <Plus size={18} /> Ajouter Produit
+         </Button>
+       </div>
+       
+       {showAddForm && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-sm relative border border-gray-700">
+               <button onClick={() => setShowAddForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+               <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Nouveau Produit</h3>
+               <div className="space-y-4">
+                 <Input label="Nom" value={newProduct.nom} onChange={e => setNewProduct({...newProduct, nom: e.target.value})} />
+                 <Input label="Catégorie" value={newProduct.cat} onChange={e => setNewProduct({...newProduct, cat: e.target.value})} />
+                 <Input label="Quantité Initiale" type="number" value={newProduct.quantite} onChange={e => setNewProduct({...newProduct, quantite: parseInt(e.target.value)})} />
+                 <Input label="Prix Unitaire (DH)" type="number" value={newProduct.prix} onChange={e => setNewProduct({...newProduct, prix: parseFloat(e.target.value)})} />
+                 <Button onClick={handleAddProduct}>Enregistrer</Button>
+               </div>
+            </div>
+         </div>
+       )}
+
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {stockItems.map((item, idx) => (
+             <div key={idx} className="dashboard-card relative overflow-hidden group hover:border-[var(--role-color)] transition-all">
+                <div className={`absolute top-0 right-0 p-2 rounded-bl-lg text-xs font-bold text-white ${item.quantite <= item.seuilCritique ? 'bg-red-500' : 'bg-green-500'}`}>
+                   {item.quantite <= item.seuilCritique ? 'Stock Faible' : 'En Stock'}
+                </div>
+                <h4 className="font-bold text-lg mb-1 text-[var(--text-main)]">{item.nom}</h4>
+                <p className="text-sm text-gray-500 mb-4">{item.cat} • {item.prix} DH/u</p>
+                
+                <div className="flex items-center justify-between bg-black/10 p-2 rounded-lg">
+                   <button onClick={() => handleStockUpdate(idx, -1)} className="p-2 hover:bg-white/10 rounded-full text-[var(--text-main)]"><Minus size={16}/></button>
+                   <span className="font-mono font-bold text-xl text-[var(--text-main)]">{item.quantite} <span className="text-xs font-normal text-gray-500">{item.unite}</span></span>
+                   <button onClick={() => handleStockUpdate(idx, 1)} className="p-2 hover:bg-white/10 rounded-full text-[var(--text-main)]"><Plus size={16}/></button>
+                </div>
+             </div>
+          ))}
+       </div>
+    </div>
+  );
+
+  const renderMealPlanning = () => (
+     <div className="animate-fade-in space-y-6">
+        <div className="flex justify-between items-center">
+           <h3 className="font-bold text-xl text-[var(--text-main)]">🍽️ Planning des Repas</h3>
+           <Button onClick={() => setShowDishForm(true)} className="w-auto px-4 flex items-center gap-2">
+              <Plus size={18} /> Nouveau Plat
+           </Button>
+        </div>
+
+        {/* Modal New Dish */}
+        {showDishForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-sm relative border border-gray-700">
+               <button onClick={() => setShowDishForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+               <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Ajouter un Plat</h3>
+               <div className="space-y-4">
+                 <Input label="Nom du plat" value={newDish.name} onChange={e => setNewDish({...newDish, name: e.target.value})} />
+                 <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Type</label>
+                    <select className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none" value={newDish.category} onChange={e => setNewDish({...newDish, category: e.target.value as MealType})}>
+                       <option value="PtDej">Petit Déjeuner</option>
+                       <option value="Dej">Déjeuner</option>
+                       <option value="Gouter">Goûter</option>
+                       <option value="Diner">Dîner</option>
+                    </select>
+                 </div>
+                 <Input label="Ingrédients" value={newDish.ingredients} onChange={e => setNewDish({...newDish, ingredients: e.target.value})} />
+                 <Input label="Coût Estimé (DH)" type="number" value={newDish.cost} onChange={e => setNewDish({...newDish, cost: parseFloat(e.target.value)})} />
+                 <Button onClick={handleAddDish}>Ajouter au Menu</Button>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Select Dish for Slot */}
+        {editingSlot && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-md relative border border-gray-700 max-h-[80vh] flex flex-col">
+                 <button onClick={() => setEditingSlot(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+                 <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Choisir pour {editingSlot.day} - {editingSlot.type}</h3>
+                 <div className="overflow-y-auto custom-scrollbar flex-1 space-y-2">
+                    {dishes.filter(d => d.category === editingSlot.type).map(dish => (
+                       <div key={dish.id} onClick={() => handleAssignDish(dish.id)} className="p-3 bg-white/5 hover:bg-white/10 cursor-pointer rounded-lg flex justify-between items-center border border-transparent hover:border-[var(--role-color)] transition-all">
+                          <div>
+                             <div className="font-bold text-[var(--text-main)]">{dish.name}</div>
+                             <div className="text-xs text-gray-500">{dish.ingredients}</div>
+                          </div>
+                          <div className="font-mono text-sm text-[var(--role-color)]">{dish.cost} DH</div>
+                       </div>
+                    ))}
+                    {dishes.filter(d => d.category === editingSlot.type).length === 0 && (
+                       <div className="text-center text-gray-500 py-4">Aucun plat disponible pour cette catégorie. Ajoutez-en un !</div>
+                    )}
+                 </div>
+              </div>
+           </div>
+        )}
+
+        {/* Weekly Grid */}
+        <div className="overflow-x-auto pb-4">
+           <table className="w-full text-sm">
+              <thead>
+                 <tr>
+                    <th className="p-3 text-left min-w-[100px] text-[var(--text-main)]">Jour</th>
+                    <th className="p-3 text-left min-w-[150px] text-[var(--text-main)]">Petit Déj</th>
+                    <th className="p-3 text-left min-w-[150px] text-[var(--text-main)]">Déjeuner</th>
+                    <th className="p-3 text-left min-w-[150px] text-[var(--text-main)]">Goûter</th>
+                    <th className="p-3 text-left min-w-[150px] text-[var(--text-main)]">Dîner</th>
+                 </tr>
+              </thead>
+              <tbody>
+                 {Object.entries(weeklyPlan).map(([day, plan]) => (
+                    <tr key={day} className="border-t border-gray-700/20">
+                       <td className="p-3 font-bold text-[var(--text-main)]">{day}</td>
+                       {(['PtDej', 'Dej', 'Gouter', 'Diner'] as MealType[]).map(type => {
+                          const dishId = plan[type];
+                          const dish = getDish(dishId);
+                          return (
+                             <td key={type} className="p-2">
+                                <div 
+                                  onClick={() => setEditingSlot({day, type})}
+                                  className="min-h-[60px] p-2 rounded bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 cursor-pointer transition-colors border border-dashed border-gray-400/30 flex flex-col justify-center"
+                                >
+                                   {dish ? (
+                                      <>
+                                         <span className="font-medium text-[var(--text-main)] block truncate">{dish.name}</span>
+                                         <span className="text-xs text-gray-500">{dish.cost} DH</span>
+                                      </>
+                                   ) : (
+                                      <span className="text-xs text-gray-400 italic text-center">+ Ajouter</span>
+                                   )}
+                                </div>
+                             </td>
+                          );
+                       })}
+                    </tr>
+                 ))}
+              </tbody>
+           </table>
+        </div>
+     </div>
+  );
+
+  const renderAppartements = () => (
+    <div className="animate-fade-in space-y-6">
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h3 className="font-bold text-xl text-[var(--text-main)]">🏨 Gestion Appartements</h3>
+          <div className="relative w-full md:w-64">
+             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+             <input 
+               type="text" 
+               placeholder="Rechercher client..." 
+               value={clientSearchQuery}
+               onChange={(e) => setClientSearchQuery(e.target.value)}
+               className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none focus:ring-2 focus:ring-[var(--role-color)] text-[var(--text-main)]"
+             />
+          </div>
+       </div>
+
+       {/* Search Results */}
+       {clientSearchQuery && (
+          <div className="dashboard-card mb-6 border border-[var(--role-color)]">
+             <h4 className="font-bold mb-3 text-[var(--text-main)]">Résultats de recherche ({searchResults.length})</h4>
+             <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
+                {searchResults.map(res => (
+                   <div key={res.id} onClick={() => { setSelectedApt(res.apt); setClientSearchQuery(''); }} className="p-3 rounded bg-black/5 dark:bg-white/5 cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 flex justify-between items-center">
+                      <div>
+                         <div className="font-bold text-[var(--text-main)]">{res.clientName}</div>
+                         <div className="text-xs text-gray-500">{res.aptNumber} - {res.building} ({res.site})</div>
+                      </div>
+                      <div className={`px-2 py-1 rounded text-xs ${res.status === 'En cours' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                         {res.status}
+                      </div>
+                   </div>
+                ))}
+                {searchResults.length === 0 && <div className="text-gray-500 italic">Aucun résultat trouvé.</div>}
+             </div>
+          </div>
+       )}
+
+       {/* Apartment Grid */}
+       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {apartments.filter(a => user.role === UserRole.Boss || a.site === user.site).map(apt => {
+             const isOccupied = apt.currentClients.length > 0;
+             return (
+               <div 
+                 key={apt.id} 
+                 onClick={() => setSelectedApt(apt)}
+                 className={`
+                    cursor-pointer p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all transform hover:scale-105 shadow-sm
+                    ${isOccupied ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}
+                 `}
+               >
+                  <div className="font-bold text-lg">{apt.number}</div>
+                  <div className="text-xs opacity-90">{apt.currentClients.length}/{apt.capacity}</div>
+                  <div className="text-[10px] uppercase tracking-wider font-semibold bg-black/20 px-2 py-0.5 rounded">
+                     {isOccupied ? 'Occupé' : 'Libre'}
+                  </div>
+               </div>
+             );
+          })}
+       </div>
+
+       {/* Apartment Detail Modal */}
+       {selectedApt && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+             <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-lg relative border border-gray-700 max-h-[90vh] overflow-y-auto">
+                <button onClick={() => setSelectedApt(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+                
+                <h3 className="text-2xl font-bold mb-1 text-[var(--text-main)]">{selectedApt.number} <span className="text-base font-normal text-gray-500">({selectedApt.building})</span></h3>
+                <div className="flex gap-2 mb-6">
+                   <span className="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs">{selectedApt.site}</span>
+                   <span className="px-2 py-1 rounded bg-gray-100 text-gray-800 text-xs">Capacité: {selectedApt.capacity}</span>
+                </div>
+
+                <div className="space-y-6">
+                   {/* Current Occupants */}
+                   <div>
+                      <h4 className="font-bold text-sm uppercase text-gray-500 mb-2">Occupants Actuels</h4>
+                      {selectedApt.currentClients.length > 0 ? (
+                         <div className="space-y-2">
+                            {selectedApt.currentClients.map(client => (
+                               <div key={client.id} className="bg-black/5 dark:bg-white/5 p-3 rounded-lg flex justify-between items-center">
+                                  <div>
+                                     <div className="font-bold text-[var(--text-main)]">{client.name}</div>
+                                     <div className="text-xs text-gray-500">Depuis: {client.entryDate} • Type: {client.type}</div>
+                                  </div>
+                                  <button 
+                                    onClick={() => { if(window.confirm('Confirmer le départ ?')) handleCheckOut(client.id); }}
+                                    className="text-red-500 hover:bg-red-500/10 p-2 rounded transition"
+                                    title="Check-out"
+                                  >
+                                     <LogOut size={18}/>
+                                  </button>
+                               </div>
+                            ))}
+                         </div>
+                      ) : (
+                         <div className="text-gray-500 italic p-4 text-center border border-dashed border-gray-600 rounded-lg">Appartement vide</div>
+                      )}
+                      
+                      {selectedApt.currentClients.length < selectedApt.capacity && (
+                         <Button onClick={() => setShowCheckInModal(true)} className="mt-4 w-full bg-[var(--role-color)]">
+                            <UserPlus size={18} className="mr-2"/> Nouveau Check-in
+                         </Button>
+                      )}
+                   </div>
+
+                   {/* History */}
+                   <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-bold text-sm uppercase text-gray-500">Historique</h4>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto custom-scrollbar border-t border-gray-700/20 pt-2">
+                         {selectedApt.history.length > 0 ? (
+                            selectedApt.history.map((h, i) => (
+                               <div key={i} className="py-2 border-b border-gray-700/10 text-sm">
+                                  <div className="flex justify-between">
+                                     <span className="font-medium text-[var(--text-main)]">{h.clientName}</span>
+                                     <span className="text-xs text-gray-500">{h.type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">{h.entryDate} ➔ {h.leaveDate}</div>
+                               </div>
+                            ))
+                         ) : (
+                            <div className="text-xs text-gray-500 italic">Aucun historique récent.</div>
+                         )}
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+       )}
+
+       {/* Check In Modal */}
+       {showCheckInModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+             <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-sm relative border border-gray-700">
+                <button onClick={() => setShowCheckInModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+                <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Nouveau Client</h3>
+                <div className="space-y-4">
+                   <Input 
+                     label="Nom Complet" 
+                     value={newClient.name}
+                     onChange={e => setNewClient({...newClient, name: e.target.value})}
+                   />
+                   <Input 
+                     label="Date d'entrée" 
+                     type="date"
+                     value={newClient.date}
+                     onChange={e => setNewClient({...newClient, date: e.target.value})}
+                   />
+                   <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Type d'hébergement</label>
+                      <select 
+                        className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none text-[var(--text-main)]"
+                        value={newClient.type}
+                        onChange={e => setNewClient({...newClient, type: e.target.value as HebergementType})}
+                      >
+                         <option value="1/4">1/4 (4 pers max)</option>
+                         <option value="1/3">1/3 (3 pers max)</option>
+                         <option value="1/2">1/2 (2 pers max)</option>
+                         <option value="1/1">1/1 (Individuel)</option>
+                      </select>
+                   </div>
+                   <Button onClick={handleCheckIn}>Confirmer Entrée</Button>
+                </div>
+             </div>
+          </div>
+       )}
+    </div>
+  );
+
+  const renderBlanchisserie = () => (
+    <div className="animate-fade-in space-y-6">
+       <div className="flex justify-between items-center">
+          <h3 className="font-bold text-xl text-[var(--text-main)]">🧺 Blanchisserie</h3>
+          <Button onClick={() => setShowLaundryForm(true)} className="w-auto px-4 flex items-center gap-2">
+             <Plus size={18} /> Nouvelle Demande
+          </Button>
+       </div>
+
+       {showLaundryForm && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-sm relative border border-gray-700">
+               <button onClick={() => setShowLaundryForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+               <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Déposer Linge</h3>
+               
+               <div className="space-y-4">
+                 <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-1">Appartement</label>
+                    <select 
+                      className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none text-[var(--text-main)]"
+                      value={newLaundryOrder.apartmentId}
+                      onChange={e => setNewLaundryOrder({...newLaundryOrder, apartmentId: e.target.value, clientId: ''})}
+                    >
+                       <option value="">Choisir...</option>
+                       {apartments.filter(a => a.currentClients.length > 0 && (user.role === UserRole.Boss || a.site === user.site)).map(apt => (
+                          <option key={apt.id} value={apt.id}>{apt.number} ({apt.currentClients.length} clients)</option>
+                       ))}
+                    </select>
+                 </div>
+                 
+                 {newLaundryOrder.apartmentId && (
+                   <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Client</label>
+                      <select 
+                        className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none text-[var(--text-main)]"
+                        value={newLaundryOrder.clientId}
+                        onChange={e => setNewLaundryOrder({...newLaundryOrder, clientId: e.target.value})}
+                      >
+                         <option value="">Choisir...</option>
+                         {apartments.find(a => a.id === newLaundryOrder.apartmentId)?.currentClients.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                         ))}
+                      </select>
+                   </div>
+                 )}
+
+                 <Input 
+                   label="Description Articles" 
+                   placeholder="Ex: 2 Chemises, 1 Pantalon..."
+                   value={newLaundryOrder.items}
+                   onChange={e => setNewLaundryOrder({...newLaundryOrder, items: e.target.value})}
+                 />
+
+                 <Button onClick={handleAddLaundryOrder}>Valider Dépôt</Button>
+               </div>
+            </div>
+         </div>
+       )}
+
+       {/* Orders List */}
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {laundryOrders.map(order => (
+             <div key={order.id} className="dashboard-card border-l-4 border-l-[var(--role-color)]">
+                <div className="flex justify-between items-start mb-2">
+                   <div>
+                      <div className="font-bold text-[var(--text-main)]">{order.clientName}</div>
+                      <div className="text-xs text-gray-500">{order.apartmentNumber} • {order.site}</div>
+                   </div>
+                   <div className="text-xs text-gray-400">{order.date}</div>
+                </div>
+                <div className="bg-black/5 dark:bg-white/5 p-2 rounded text-sm mb-4 min-h-[40px] text-[var(--text-main)]">
+                   {order.items}
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                   <div className="text-xs font-semibold uppercase text-gray-500">Statut</div>
+                   <div className="flex gap-1 flex-wrap">
+                      {(['En attente', 'En blanchisserie', 'En réception', 'Livré'] as LaundryStatus[]).map(status => (
+                         <button 
+                           key={status}
+                           onClick={() => updateLaundryStatus(order.id, status)}
+                           className={`px-2 py-1 text-[10px] rounded border transition-colors
+                             ${order.status === status 
+                               ? 'bg-[var(--role-color)] text-white border-[var(--role-color)]' 
+                               : 'bg-transparent text-gray-500 border-gray-600 hover:border-gray-400'}
+                           `}
+                         >
+                            {status}
+                         </button>
+                      ))}
+                   </div>
+                </div>
+             </div>
+          ))}
+          {laundryOrders.length === 0 && (
+             <div className="col-span-full text-center py-10 text-gray-500 opacity-60">
+                <Shirt size={48} className="mx-auto mb-2"/>
+                Aucune commande de blanchisserie en cours.
+             </div>
+          )}
+       </div>
+    </div>
+  );
+
+  const renderRestaurant = () => (
+    <div className="animate-fade-in space-y-6">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Order Taking Form */}
+          <div className="dashboard-card col-span-1 lg:col-span-1 border border-[var(--role-color)]">
+             <h3 className="font-bold text-lg mb-4 text-[var(--text-main)] flex items-center gap-2">
+                <Utensils size={18} /> Prise de Commande
+             </h3>
+             
+             <div className="space-y-4">
+                <div className="flex gap-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                   <button 
+                     onClick={() => setNewRestoOrder({...newRestoOrder, isDrinkOnly: false})}
+                     className={`flex-1 py-2 text-sm rounded font-medium transition ${!newRestoOrder.isDrinkOnly ? 'bg-white text-black shadow' : 'text-gray-500'}`}
+                   >
+                      Repas
+                   </button>
+                   <button 
+                     onClick={() => setNewRestoOrder({...newRestoOrder, isDrinkOnly: true})}
+                     className={`flex-1 py-2 text-sm rounded font-medium transition ${newRestoOrder.isDrinkOnly ? 'bg-white text-black shadow' : 'text-gray-500'}`}
+                   >
+                      Boisson Seule
+                   </button>
+                </div>
+
+                {!newRestoOrder.isDrinkOnly && (
+                   <div className="p-3 bg-green-500/10 border border-green-500/30 rounded text-center">
+                      <div className="text-xs uppercase text-green-600 font-bold mb-1">Service Actuel</div>
+                      <div className="text-lg font-bold text-green-700">{currentMealService === 'PtDej' ? 'Petit Déjeuner' : currentMealService === 'Dej' ? 'Déjeuner' : currentMealService === 'Gouter' ? 'Goûter' : 'Dîner'}</div>
+                   </div>
+                )}
+
+                <div>
+                   <label className="block text-sm font-medium text-gray-500 mb-1">Client / Chambre</label>
+                   <select 
+                     className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none text-[var(--text-main)]"
+                     value={newRestoOrder.clientId}
+                     onChange={e => setNewRestoOrder({...newRestoOrder, clientId: e.target.value})}
+                   >
+                      <option value="">Sélectionner...</option>
+                      {apartments.filter(a => a.currentClients.length > 0).flatMap(a => a.currentClients.map(c => (
+                         <option key={c.id} value={c.id}>{a.number} - {c.name}</option>
+                      )))}
+                   </select>
+                </div>
+
+                <div>
+                   <label className="block text-sm font-medium text-gray-500 mb-1">Boissons (Optionnel)</label>
+                   <Input 
+                     placeholder="Ex: Eau, Soda, Café..."
+                     value={newRestoOrder.drinks.join(', ')}
+                     onChange={(e) => setNewRestoOrder({...newRestoOrder, drinks: e.target.value ? e.target.value.split(',').map(s=>s.trim()) : []})}
+                   />
+                </div>
+
+                <Button onClick={handleValidateRestoOrder} className="w-full">
+                   <Printer size={18} className="mr-2"/> Générer Bon
+                </Button>
+             </div>
+          </div>
+
+          {/* Orders History */}
+          <div className="dashboard-card col-span-1 lg:col-span-2">
+             <h3 className="font-bold text-lg mb-4 text-[var(--text-main)]">Historique des Commandes</h3>
+             <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                   <thead className="text-xs uppercase bg-black/5 dark:bg-white/5 text-gray-500">
+                      <tr>
+                         <th className="p-3">Heure</th>
+                         <th className="p-3">Client</th>
+                         <th className="p-3">Type</th>
+                         <th className="p-3">Détails</th>
+                         <th className="p-3">Action</th>
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {restaurantOrders.map(order => (
+                         <tr key={order.id} className="border-b border-gray-700/10 hover:bg-white/5">
+                            <td className="p-3 font-mono text-xs">{order.date}<br/>{order.time}</td>
+                            <td className="p-3">
+                               <div className="font-bold text-[var(--text-main)]">{order.clientName}</div>
+                               <div className="text-xs text-gray-500">{order.aptNumber}</div>
+                            </td>
+                            <td className="p-3">
+                               <span className={`px-2 py-1 rounded text-xs ${order.type === 'Repas' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                                  {order.type === 'Repas' ? order.mealType : 'Boisson'}
+                               </span>
+                            </td>
+                            <td className="p-3 text-xs text-gray-500">
+                               {order.items.length > 0 ? order.items.join(', ') : '-'}
+                            </td>
+                            <td className="p-3">
+                               <button onClick={() => setShowBonModal(order)} className="text-blue-500 hover:underline text-xs">Revoir Bon</button>
+                            </td>
+                         </tr>
+                      ))}
+                      {restaurantOrders.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-gray-500">Aucune commande.</td></tr>}
+                   </tbody>
+                </table>
+             </div>
+          </div>
+       </div>
+
+       {/* Bon Modal */}
+       {showBonModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+             <div className="bg-white text-black p-8 rounded-sm shadow-2xl w-full max-w-xs relative paper-texture">
+                <button onClick={() => setShowBonModal(null)} className="absolute top-2 right-2 text-gray-400 hover:text-black print:hidden"><X size={20}/></button>
+                
+                <div className="text-center border-b-2 border-black pb-4 mb-4 border-dashed">
+                   <h2 className="font-bold text-xl uppercase">Résidence Samia</h2>
+                   <div className="text-xs">Bon de Restauration</div>
+                </div>
+                
+                <div className="space-y-2 mb-6 text-sm font-mono">
+                   <div className="flex justify-between"><span>Date:</span> <span>{showBonModal.date} {showBonModal.time}</span></div>
+                   <div className="flex justify-between"><span>Client:</span> <span className="font-bold">{showBonModal.clientName}</span></div>
+                   <div className="flex justify-between"><span>Chambre:</span> <span>{showBonModal.aptNumber}</span></div>
+                   <div className="border-t border-black border-dashed my-2"></div>
+                   <div className="flex justify-between font-bold"><span>TYPE:</span> <span>{showBonModal.type === 'Repas' ? showBonModal.mealType : 'BOISSON'}</span></div>
+                   {showBonModal.items.length > 0 && (
+                      <div className="mt-2">
+                         <div className="underline mb-1">Articles:</div>
+                         {showBonModal.items.map((item, i) => (
+                            <div key={i}>- {item}</div>
+                         ))}
+                      </div>
+                   )}
+                </div>
+
+                <div className="text-center text-xs mt-8 pt-4 border-t-2 border-black border-dashed">
+                   <p>Bon appétit !</p>
+                   <p className="mt-2 font-bold">Signature Client:</p>
+                   <div className="h-12"></div>
+                </div>
+
+                <Button onClick={() => window.print()} className="w-full mt-4 print:hidden bg-black text-white hover:bg-gray-800">
+                   Imprimer
+                </Button>
+             </div>
+          </div>
+       )}
+    </div>
+  );
+
+  const renderEmployees = () => (
+    <div className="animate-fade-in space-y-6">
+       <div className="flex justify-between items-center">
+          <h3 className="font-bold text-xl text-[var(--text-main)]">👥 Gestion du Personnel</h3>
+          {user.role === UserRole.Boss && (
+            <Button onClick={() => setShowEmployeeForm(true)} className="w-auto px-4 flex items-center gap-2">
+               <UserPlus size={18} /> Ajouter Employé
+            </Button>
+          )}
+       </div>
+
+       {showEmployeeForm && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="bg-[var(--bg-card)] p-6 rounded-xl shadow-2xl w-full max-w-sm relative border border-gray-700">
+               <button onClick={() => setShowEmployeeForm(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
+               <h3 className="text-xl font-bold mb-4 text-[var(--text-main)]">Nouveau Profil</h3>
+               <div className="space-y-4">
+                  <Input label="Nom Complet" value={newEmployee.name} onChange={e => setNewEmployee({...newEmployee, name: e.target.value})} />
+                  <Input label="Fonction / Poste" value={newEmployee.function} onChange={e => setNewEmployee({...newEmployee, function: e.target.value})} />
+                  <Input label="Téléphone" value={newEmployee.phone} onChange={e => setNewEmployee({...newEmployee, phone: e.target.value})} />
+                  <div>
+                     <label className="block text-sm font-medium text-gray-500 mb-1">Shift</label>
+                     <select className="w-full p-3 rounded bg-gray-100 dark:bg-gray-800 border-none text-[var(--text-main)]" value={newEmployee.shift} onChange={e => setNewEmployee({...newEmployee, shift: e.target.value as any})}>
+                        <option value="Matin">Matin</option>
+                        <option value="Soir">Soir</option>
+                        <option value="Jour">Journée</option>
+                     </select>
+                  </div>
+                  <Input label="Salaire Mensuel (DH)" type="number" value={newEmployee.monthlySalary} onChange={e => setNewEmployee({...newEmployee, monthlySalary: parseFloat(e.target.value)})} />
+                  <Button onClick={handleAddEmployee}>Créer Profil</Button>
+               </div>
+            </div>
+         </div>
+       )}
+
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {employees.map(emp => (
+             <div key={emp.id} className="dashboard-card group">
+                <div className="flex justify-between items-start mb-4">
+                   <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-500 dark:text-gray-400">
+                         {emp.name.charAt(0)}
+                      </div>
+                      <div>
+                         <div className="font-bold text-lg text-[var(--text-main)]">{emp.name}</div>
+                         <div className="text-sm text-gray-500">{emp.function} • {emp.phone}</div>
+                      </div>
+                   </div>
+                   <div className={`px-2 py-1 rounded text-xs font-bold ${emp.status === 'Présent' ? 'bg-green-100 text-green-700' : emp.status === 'Absent' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                      {emp.status}
+                   </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4 bg-black/5 dark:bg-white/5 p-3 rounded-lg">
+                   <div>
+                      <div className="text-xs text-gray-500 uppercase">Salaire</div>
+                      <div className="font-mono font-bold text-[var(--text-main)]">{emp.monthlySalary} DH</div>
+                   </div>
+                   <div>
+                      <div className="text-xs text-gray-500 uppercase">Absences (Mois)</div>
+                      <div className="flex items-center gap-2">
+                         <span className="font-bold text-[var(--text-main)]">{emp.absences}j</span>
+                         {user.role === UserRole.Boss && (
+                            <div className="flex gap-1">
+                               <button onClick={() => updateEmployeeAbsences(emp.id, Math.max(0, emp.absences - 1))} className="w-5 h-5 rounded bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300">-</button>
+                               <button onClick={() => updateEmployeeAbsences(emp.id, emp.absences + 1)} className="w-5 h-5 rounded bg-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-300">+</button>
+                            </div>
+                         )}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="border-t border-gray-700/20 pt-4 mt-2">
+                   <div className="text-xs font-semibold text-gray-500 mb-2 uppercase">Pointage du jour</div>
+                   <div className="flex gap-2">
+                      <button onClick={() => updateEmployeeStatus(emp.id, 'Présent')} className={`flex-1 py-1 rounded text-xs border ${emp.status==='Présent' ? 'bg-green-600 text-white border-green-600' : 'border-gray-300 text-gray-500 hover:border-green-400'}`}>Présent</button>
+                      <button onClick={() => updateEmployeeStatus(emp.id, 'Retard')} className={`flex-1 py-1 rounded text-xs border ${emp.status==='Retard' ? 'bg-orange-500 text-white border-orange-500' : 'border-gray-300 text-gray-500 hover:border-orange-400'}`}>Retard</button>
+                      <button onClick={() => updateEmployeeStatus(emp.id, 'Absent')} className={`flex-1 py-1 rounded text-xs border ${emp.status==='Absent' ? 'bg-red-600 text-white border-red-600' : 'border-gray-300 text-gray-500 hover:border-red-400'}`}>Absent</button>
+                   </div>
+                </div>
+             </div>
+          ))}
        </div>
     </div>
   );
